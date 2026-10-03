@@ -40,11 +40,11 @@ Use [Tailscale](https://tailscale.com) on both devices and enter the PC's Tailsc
 
 ## Install
 
-Download the latest APK from the **Releases** page and install it (you may need to allow installs from your browser or file manager).
+**[⬇ Download the latest APK](https://github.com/monkeyaDluffy/studio-remote-for-unsloth/releases/latest/download/StudioRemote-for-Unsloth.apk)**, open it on your phone and install it (you may need to allow installs from your browser or file manager). Older versions are on the [Releases](https://github.com/monkeyaDluffy/studio-remote-for-unsloth/releases) page.
 
 Verify the download: the APK should be signed with this certificate.
 
-- SHA-256 fingerprint: `[TODO: paste fingerprint from apksigner verify --print-certs]`
+- SHA-256 fingerprint: `913fe2cb3bbaea75fcdccb80e5e6d3a536cd175433a2fab968cc8b2a290d1d24`
 
 ## Security notes
 
