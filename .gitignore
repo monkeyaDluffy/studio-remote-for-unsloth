@@ -1,0 +1,11 @@
+.gradle/
+.kotlin/
+build/
+app/build/
+.idea/
+*.iml
+local.properties
+# Release signing: keep these out of git and back them up in two places.
+keystore.properties
+*.jks
+*.keystore
