@@ -49,6 +49,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -57,6 +58,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.monkeyadluffy.studioremote.R
 
 /** Width of the window the app is drawn in. */
 @Composable
@@ -150,7 +152,7 @@ fun PillField(
                     Box(Modifier.padding(end = 8.dp)) {
                         IconTap(
                             if (revealed) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
-                            if (revealed) "Şifreyi gizle" else "Şifreyi göster",
+                            stringResource(if (revealed) R.string.hide_password else R.string.show_password),
                             size = 44.dp, iconSize = 22.dp,
                         ) { revealed = !revealed }
                     }
@@ -180,7 +182,7 @@ fun PrimaryButton(text: String, enabled: Boolean = true, loading: Boolean = fals
     }
 }
 
-/** Compact inline action, e.g. "İzin ver" / "Reddet" on a tool card. */
+/** Compact inline action, e.g. "Allow" / "Deny" on a tool card. */
 @Composable
 fun PillButton(text: String, primary: Boolean, onClick: () -> Unit) {
     Box(
@@ -244,7 +246,7 @@ fun AppSheet(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit)
 @Composable
 fun ScreenHeader(title: String, onMenu: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-        CircleButton(Icons.Rounded.Menu, "Menü", onClick = onMenu)
+        CircleButton(Icons.Rounded.Menu, stringResource(R.string.menu), onClick = onMenu)
         Spacer(Modifier.size(14.dp))
         Text(title, color = C.Text, fontSize = 22.sp, fontWeight = FontWeight.Bold)
     }
@@ -301,7 +303,7 @@ fun ThinProgress(fraction: Double, modifier: Modifier = Modifier) {
 
 /** A tappable model row inside an [InfoCard]: name, optional size, and a trailing action. */
 @Composable
-fun PickRow(title: String, subtitle: String?, action: String = "Yükle ›", onClick: () -> Unit) {
+fun PickRow(title: String, subtitle: String?, action: String = stringResource(R.string.load_arrow), onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -315,18 +317,18 @@ fun PickRow(title: String, subtitle: String?, action: String = "Yükle ›", onC
 }
 
 @Composable
-fun ConfirmDialog(title: String, message: String, action: String = "Sil", onDismiss: () -> Unit, onConfirm: () -> Unit) {
+fun ConfirmDialog(title: String, message: String, action: String = stringResource(R.string.delete), onDismiss: () -> Unit, onConfirm: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = C.SurfaceHigh,
         title = { Text(title) },
         text = { Text(message, color = C.TextDim) },
         confirmButton = { TextButton(onClick = onConfirm) { Text(action, color = C.Error) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("İptal", color = C.TextDim) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel), color = C.TextDim) } },
     )
 }
 
-/** A spinner followed by a status line, e.g. "Yükleniyor: …". */
+/** A spinner followed by a status line, e.g. "Loading: …". */
 @Composable
 fun BusyRow(text: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {

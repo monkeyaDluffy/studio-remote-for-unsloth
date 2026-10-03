@@ -31,12 +31,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.monkeyadluffy.studioremote.AppViewModel
 import io.github.monkeyadluffy.studioremote.MediaStudio
+import io.github.monkeyadluffy.studioremote.R
 import io.github.monkeyadluffy.studioremote.UiState
 import io.github.monkeyadluffy.studioremote.data.GalleryItem
 import io.github.monkeyadluffy.studioremote.data.galleryFilePath
@@ -57,21 +60,20 @@ fun SpeechScreen(vm: AppViewModel, state: UiState, onMenu: () -> Unit, onOpenMod
     val ready = st?.isAudio == true || st?.audioType != null
 
     MediaGrid(columns = 1) {
-        fullRow { ScreenHeader("Metni sese çevir", onMenu) }
+        fullRow { ScreenHeader(stringResource(R.string.tts_title), onMenu) }
         fullRow {
-            InfoCard("Ses modeli") {
+            InfoCard(stringResource(R.string.speech_model)) {
                 if (ready) {
                     Text(st?.label.orEmpty(), color = C.Text, fontSize = 16.sp)
                     return@InfoCard
                 }
                 Text(
-                    "Yüklü model bir ses modeli değil. Bir ses modeli yüklediğinde sohbet modeli bellekten çıkar; " +
-                        "sohbete dönünce tekrar sohbet modeli seçmen gerekir.",
+                    stringResource(R.string.not_a_speech_model),
                     color = C.TextDim, fontSize = 14.sp,
                 )
                 Spacer(Modifier.height(8.dp))
                 if (speech.models.isEmpty()) {
-                    Text("İndirilmiş ses modeli yok. Modeller sayfasından \"tts\" diye arayabilirsin.", color = C.TextFaint, fontSize = 13.sp)
+                    Text(stringResource(R.string.no_speech_models), color = C.TextFaint, fontSize = 13.sp)
                 }
                 speech.models.forEach { m ->
                     PickRow(m.repoId.substringAfter('/'), formatSize(m.sizeBytes)) {
@@ -83,9 +85,9 @@ fun SpeechScreen(vm: AppViewModel, state: UiState, onMenu: () -> Unit, onOpenMod
         }
         fullRow {
             Column(Modifier.padding(horizontal = 16.dp)) {
-                PillField(text, { text = it }, "Seslendirilecek metin", singleLine = false)
+                PillField(text, { text = it }, stringResource(R.string.tts_placeholder), singleLine = false)
                 Spacer(Modifier.height(12.dp))
-                PrimaryButton("Seslendir", enabled = ready && text.isNotBlank(), loading = speech.generating) { vm.media.speak(text) }
+                PrimaryButton(stringResource(R.string.speak), enabled = ready && text.isNotBlank(), loading = speech.generating) { vm.media.speak(text) }
                 speech.lastAudio?.let { file ->
                     Spacer(Modifier.height(10.dp))
                     Row(
@@ -93,12 +95,12 @@ fun SpeechScreen(vm: AppViewModel, state: UiState, onMenu: () -> Unit, onOpenMod
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         PlayButton(player.playing == file.absolutePath) { player.toggle(file) }
-                        Text("Son üretilen ses", color = C.Text, fontSize = 15.sp)
+                        Text(stringResource(R.string.last_audio), color = C.Text, fontSize = 15.sp)
                     }
                 }
             }
         }
-        galleryHeader(loading = false, empty = speech.gallery.isEmpty(), emptyText = "Henüz ses yok")
+        galleryHeader(loading = false, empty = speech.gallery.isEmpty(), emptyText = R.string.no_audio)
         items(speech.gallery, key = { it.id }) { item ->
             AudioRow(vm.media, item, player) { vm.media.deleteAudio(item) }
         }
@@ -107,12 +109,13 @@ fun SpeechScreen(vm: AppViewModel, state: UiState, onMenu: () -> Unit, onOpenMod
 
 @Composable
 private fun PlayButton(playing: Boolean, onClick: () -> Unit) =
-    IconTap(if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, if (playing) "Durdur" else "Oynat", tint = C.Text, onClick = onClick)
+    IconTap(if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, stringResource(if (playing) R.string.stop else R.string.play), tint = C.Text, onClick = onClick)
 
 @Composable
 private fun AudioRow(media: MediaStudio, item: GalleryItem, player: AudioPlayer, onDelete: () -> Unit) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val res = LocalResources.current
     var fetching by remember { mutableStateOf(false) }
     val name = "audio-${item.id}.wav"
     Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -123,17 +126,17 @@ private fun AudioRow(media: MediaStudio, item: GalleryItem, player: AudioPlayer,
                 scope.launch {
                     fetching = true
                     val message = runCatching { media.fileOnDisk(galleryFilePath("audio", item.id), name) }
-                        .fold({ if (player.toggle(it)) null else "Ses çalınamadı" }, { "Ses indirilemedi" })
+                        .fold({ if (player.toggle(it)) null else R.string.audio_play_failed }, { R.string.audio_download_failed })
                     fetching = false
-                    message?.let { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
+                    message?.let { Toast.makeText(context, res.getString(it), Toast.LENGTH_SHORT).show() }
                 }
             }
         }
         Column(Modifier.weight(1f)) {
-            Text(item.prompt.orEmpty().ifBlank { "Ses" }, color = C.Text, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(item.prompt.orEmpty().ifBlank { stringResource(R.string.audio) }, color = C.Text, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
             item.durationS?.let { Text(formatSeconds(it), color = C.TextFaint, fontSize = 12.5.sp) }
         }
-        IconTap(Icons.Rounded.Delete, "Sil", size = 40.dp, iconSize = 20.dp, onClick = onDelete)
+        IconTap(Icons.Rounded.Delete, stringResource(R.string.delete), size = 40.dp, iconSize = 20.dp, onClick = onDelete)
     }
 }
 

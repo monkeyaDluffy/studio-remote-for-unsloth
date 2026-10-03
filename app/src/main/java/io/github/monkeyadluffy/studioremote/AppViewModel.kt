@@ -1,6 +1,7 @@
 package io.github.monkeyadluffy.studioremote
 
 import android.app.Application
+import androidx.annotation.StringRes
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.monkeyadluffy.studioremote.data.Api
@@ -15,6 +16,7 @@ import io.github.monkeyadluffy.studioremote.data.Conversation
 import io.github.monkeyadluffy.studioremote.data.GgufVariants
 import io.github.monkeyadluffy.studioremote.data.InferenceStatus
 import io.github.monkeyadluffy.studioremote.data.LoadRequest
+import io.github.monkeyadluffy.studioremote.data.LocalizedException
 import io.github.monkeyadluffy.studioremote.data.PendingFile
 import io.github.monkeyadluffy.studioremote.data.Prefs
 import io.github.monkeyadluffy.studioremote.data.ROLE_ASSISTANT
@@ -85,7 +87,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private val api = Api(
         onTokens = { t -> saveSettings(settings.copy(accessToken = t.accessToken, refreshToken = t.refreshToken)) },
-        onSessionExpired = { _state.update { it.copy(error = "Oturum süresi doldu, tekrar giriş yap") } },
+        onSessionExpired = { _state.update { it.copy(error = str(R.string.session_expired)) } },
     )
 
     /** Whether the activity is on screen (set by MainActivity); off-screen replies notify when done. */
@@ -138,14 +140,25 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun clearError() = _state.update { it.copy(error = null) }
 
+    /** A string in the language picked in Settings (the application context alone follows the phone). */
+    private fun str(@StringRes id: Int, vararg args: Any): String = AppLanguage.wrap(getApplication()).getString(id, *args)
+
     private fun describe(e: Throwable): String = when (e) {
         // FastAPI's bare "Not Found" means the route itself is gone, not a missing chat or model.
-        is ApiException if e.code == 404 && e.message == "Not Found" -> STUDIO_INCOMPATIBLE
-        is ApiException -> unsupportedArchitecture(e.message) ?: e.message ?: "Hata ${e.code}"
-        is SerializationException -> STUDIO_INCOMPATIBLE
-        is UnknownHostException -> "Sunucuya ulaşılamıyor (link değişmiş olabilir)"
-        is SocketTimeoutException -> "Sunucu yanıt vermiyor"
+        is ApiException if e.code == 404 && e.message == "Not Found" -> str(R.string.studio_incompatible)
+        is ApiException -> unsupportedArchitecture(e.message) ?: e.message ?: str(e.fallback, e.code)
+        is LocalizedException -> e.message ?: str(e.res)
+        is SerializationException -> str(R.string.studio_incompatible)
+        is UnknownHostException -> str(R.string.server_unreachable)
+        is SocketTimeoutException -> str(R.string.server_not_responding)
         else -> e.message ?: e.javaClass.simpleName
+    }
+
+    /** Studio's "llama.cpp does not recognise this architecture" error, explained. */
+    private fun unsupportedArchitecture(message: String?): String? {
+        val arch = ARCHITECTURE_ERROR.find(message.orEmpty())?.groupValues?.get(1) ?: return null
+        val hint = if (arch.contains("whisper", ignoreCase = true)) R.string.unsupported_hint_whisper else R.string.unsupported_hint_audio
+        return listOf(str(R.string.unsupported_architecture, arch), str(hint), str(R.string.unsupported_delete_hint)).joinToString(" ")
     }
 
     /** Launches [block], reporting failures through the snackbar. */
@@ -340,7 +353,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val created = api.createThread(
             ChatThread(
                 id = "__LOCALID_" + newId(), // Studio's own id scheme for client-created threads
-                title = title?.let(::threadTitle) ?: "Yeni sohbet",
+                title = title?.let(::threadTitle) ?: str(R.string.new_chat),
                 modelId = st?.modelId.orEmpty(),
                 modelGgufVariant = st?.ggufVariant,
                 createdAt = now,
@@ -407,7 +420,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 throw e
             } catch (e: Throwable) {
                 if (previous == null) throw e
-                _state.update { it.copy(error = describe(e) + "\n\nÖnceki model (${previous.label}) geri yükleniyor.") }
+                _state.update { it.copy(error = describe(e) + "\n\n" + str(R.string.restoring_previous_model, previous.label.orEmpty())) }
                 loadAndWait(LoadRequest(previous.modelId!!, previous.ggufVariant))
             }
         }
@@ -460,7 +473,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     } catch (e: Throwable) {
         if (e is ApiException && e.code == 409 && e.message.orEmpty().contains("download", ignoreCase = true)) {
             runCatching { api.downloadDictationModel() }
-            _state.update { it.copy(error = "Whisper modeli indiriliyor, birkaç dakika sonra tekrar dene") }
+            _state.update { it.copy(error = str(R.string.whisper_downloading)) }
         } else {
             report(e)
         }
@@ -519,7 +532,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                             return@launch
                         }
                         "failed", "error", "cancelled" -> {
-                            update { it.copy(status = PendingFile.Status.Failed, error = job.error ?: "Dosya işlenemedi") }
+                            update { it.copy(status = PendingFile.Status.Failed, error = job.error ?: str(R.string.file_processing_failed)) }
                             return@launch
                         }
                         null -> {}
@@ -615,7 +628,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val trimmed = text.trim()
         if ((trimmed.isEmpty() && images.isEmpty()) || s.generating) return
         if (s.pendingFiles.any { it.busy }) {
-            _state.update { it.copy(error = "Dosyalar hâlâ işleniyor, birazdan tekrar dene") }
+            _state.update { it.copy(error = str(R.string.files_still_processing)) }
             return
         }
         val user = UiMessage(
@@ -663,7 +676,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
         // Run ids must match ^[A-Za-z0-9_-]+$.
         launchReply(assistant.id, cancelId = "m" + UUID.randomUUID().toString().replace("-", "")) {
-            val threadId = ensureThread(user.text.ifEmpty { "Görsel" })
+            val threadId = ensureThread(user.text.ifEmpty { str(R.string.image) })
             this.threadId = threadId
             val conversation = buildList {
                 if (settings.systemPrompt.isNotBlank()) add(ApiMessage("system", settings.systemPrompt))
@@ -789,14 +802,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             } catch (e: Throwable) {
                 if (e is ApiException && e.code in 400..499 && e.code !in RETRYABLE) throw e
                 failures++
-                if (failures >= 3) updateMessage(assistantId) { it.copy(error = "Bağlantı koptu, yeniden bağlanılıyor…") }
+                if (failures >= 3) updateMessage(assistantId) { it.copy(error = str(R.string.connection_lost)) }
                 delay(minOf(1000L * failures, 5000L))
                 continue
             }
             val end = finished ?: continue // closed before the end: reconnect
-            if (end.status == "failed") throw ApiException(500, end.error ?: "Yanıt üretilemedi")
+            if (end.status == "failed") throw ApiException(500, end.error, R.string.reply_failed)
             if (end.status == "cancelled" && failIfCancelledEmpty && message(assistantId)?.hasContent != true) {
-                throw ApiException(499, "Cevap tamamlanmadan durduruldu")
+                throw ApiException(499, null, R.string.reply_stopped)
             }
             return // completed or cancelled
         }
@@ -845,21 +858,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private companion object {
         val ARCHITECTURE_ERROR = Regex("""does not recognise this GGUF's model architecture \('([^']+)'\)""")
 
-        /** Studio's "llama.cpp does not recognise this architecture" error, explained. */
-        fun unsupportedArchitecture(message: String?): String? {
-            val arch = ARCHITECTURE_ERROR.find(message.orEmpty())?.groupValues?.get(1) ?: return null
-            val hint = when {
-                arch.contains("whisper", ignoreCase = true) ->
-                    " Whisper bir sesten yazıya modeli; sesle yazmak için Ayarlar'daki \"Studio Whisper\" seçeneğini kullan, ayrıca model indirmen gerekmez."
-                else ->
-                    " Ses için Studio yalnızca Orpheus, Spark-TTS ve OuteTTS modellerini çalıştırabiliyor."
-            }
-            return "Studio bu modeli çalıştıramıyor ('$arch' türü desteklenmiyor).$hint Modeller sayfasından silebilirsin."
-        }
 
         const val ID_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
         val RETRYABLE = setOf(401, 408, 429)
-        const val STUDIO_INCOMPATIBLE =
-            "Studio sürümün bu uygulamayla uyumlu olmayabilir. Studio'yu güncelle ya da uygulamanın son sürümünü indir."
     }
 }

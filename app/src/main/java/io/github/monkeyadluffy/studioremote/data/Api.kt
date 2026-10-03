@@ -1,5 +1,7 @@
 package io.github.monkeyadluffy.studioremote.data
 
+import androidx.annotation.StringRes
+import io.github.monkeyadluffy.studioremote.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -27,7 +29,11 @@ import java.io.IOException
 import java.net.URLEncoder
 import java.util.concurrent.TimeUnit
 
-class ApiException(val code: Int, message: String) : IOException(message)
+/** [message] is Studio's own wording when it sent one; otherwise the app shows [fallback] (with [code]). */
+class ApiException(val code: Int, message: String?, @param:StringRes val fallback: Int = R.string.error_http) : IOException(message)
+
+/** A failure the app words itself, in the chosen language; [detail] from the server wins when present. */
+class LocalizedException(@param:StringRes val res: Int, detail: String? = null) : Exception(detail)
 
 /** Normalises a pasted link: adds https:// and drops any path such as /chat. */
 fun normalizeServerUrl(raw: String): String {
@@ -132,7 +138,7 @@ class Api(
             val text = it.body.string()
             if (text.startsWith(" ")) {
                 val err = parseObject(text.trim())?.get("_deferred_error") as? JsonObject
-                if (err != null) throw ApiException(err.str("status_code")?.toIntOrNull() ?: 500, err["detail"]?.let(::resultText) ?: "İşlem başarısız")
+                if (err != null) throw ApiException(err.str("status_code")?.toIntOrNull() ?: 500, err["detail"]?.let(::resultText), R.string.request_failed)
             }
             text
         }

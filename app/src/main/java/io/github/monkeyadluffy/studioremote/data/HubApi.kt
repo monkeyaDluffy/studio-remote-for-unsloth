@@ -1,5 +1,6 @@
 package io.github.monkeyadluffy.studioremote.data
 
+import io.github.monkeyadluffy.studioremote.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
@@ -46,7 +47,7 @@ suspend fun Api.searchHub(text: String): List<HubModel> = withContext(Dispatcher
     val url = "https://huggingface.co/api/models?" +
         query("search" to text.trim(), "filter" to "gguf", "sort" to "downloads", "direction" to "-1", "limit" to "40")
     http.newCall(Request.Builder().url(url).build()).execute().use {
-        if (!it.isSuccessful) throw ApiException(it.code, "Hugging Face araması başarısız (${it.code})")
+        if (!it.isSuccessful) throw ApiException(it.code, null, R.string.hub_search_failed)
         json.decodeFromString<List<HubModel>>(it.body.string())
     }
 }

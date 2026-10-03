@@ -36,6 +36,7 @@ import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.RecordVoiceOver
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.ViewInAr
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Share
@@ -66,6 +67,9 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -73,6 +77,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.monkeyadluffy.studioremote.AppViewModel
+import io.github.monkeyadluffy.studioremote.R
 import io.github.monkeyadluffy.studioremote.UiState
 import io.github.monkeyadluffy.studioremote.data.ChatProject
 import io.github.monkeyadluffy.studioremote.data.ChatThread
@@ -88,6 +93,7 @@ fun ChatDrawer(
     onOpenPage: (Page) -> Unit,
 ) {
     val context = LocalContext.current
+    val res = LocalResources.current
     val scope = rememberCoroutineScope()
     var searching by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
@@ -107,9 +113,9 @@ fun ChatDrawer(
                 val send = Intent(Intent.ACTION_SEND).setType("text/plain")
                     .putExtra(Intent.EXTRA_SUBJECT, t.title)
                     .putExtra(Intent.EXTRA_TEXT, text)
-                context.startActivity(Intent.createChooser(send, "Sohbeti paylaş"))
+                context.startActivity(Intent.createChooser(send, res.getString(R.string.share_chat)))
             }
-            .onFailure { Toast.makeText(context, "Dışa aktarılamadı: ${it.message}", Toast.LENGTH_SHORT).show() }
+            .onFailure { Toast.makeText(context, res.getString(R.string.export_failed, it.message.orEmpty()), Toast.LENGTH_SHORT).show() }
     }
 
     @Composable
@@ -140,15 +146,17 @@ fun ChatDrawer(
         ) {
             Avatar(state.settings.shownName, onClick = onSettings)
             Spacer(Modifier.weight(1f))
+            CircleButton(Icons.Outlined.Settings, stringResource(R.string.settings), size = 56.dp) { onOpenPage(Page.Settings) }
+            Spacer(Modifier.width(12.dp))
             CircleButton(
-                if (searching) Icons.Rounded.Close else Icons.Rounded.Search, "Ara",
+                if (searching) Icons.Rounded.Close else Icons.Rounded.Search, stringResource(R.string.search),
                 size = 56.dp,
             ) {
                 searching = !searching
                 if (!searching) query = ""
             }
             Spacer(Modifier.width(12.dp))
-            CircleButton(Icons.Rounded.Add, "Yeni sohbet", size = 56.dp, iconSize = 30.dp, onClick = onNewChat)
+            CircleButton(Icons.Rounded.Add, stringResource(R.string.new_chat), size = 56.dp, iconSize = 30.dp, onClick = onNewChat)
         }
 
         AnimatedVisibility(searching) {
@@ -168,7 +176,7 @@ fun ChatDrawer(
                     .focusRequester(focus),
                 decorationBox = { inner ->
                     Box(Modifier.padding(horizontal = 18.dp, vertical = 14.dp)) {
-                        if (query.isEmpty()) Text("Sohbetlerde ara", color = C.TextFaint, fontSize = 17.sp)
+                        if (query.isEmpty()) Text(stringResource(R.string.search_chats), color = C.TextFaint, fontSize = 17.sp)
                         inner()
                     }
                 },
@@ -182,15 +190,15 @@ fun ChatDrawer(
         LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
             if (state.projects.isNotEmpty() || !searching) {
                 item {
-                    SectionHeader("Folders", foldersOpen, { foldersOpen = !foldersOpen }) {
-                        IconTap(Icons.Outlined.CreateNewFolder, "Yeni klasör", size = 40.dp, iconSize = 22.dp) { creatingFolder = true }
+                    SectionHeader(stringResource(R.string.folders), foldersOpen, { foldersOpen = !foldersOpen }) {
+                        IconTap(Icons.Outlined.CreateNewFolder, stringResource(R.string.new_folder), size = 40.dp, iconSize = 22.dp) { creatingFolder = true }
                     }
                 }
                 if (foldersOpen) {
                     if (state.projects.isEmpty()) {
                         item {
                             Text(
-                                "Henüz klasör yok",
+                                stringResource(R.string.no_folders),
                                 color = C.TextFaint, fontSize = 15.sp,
                                 modifier = Modifier.padding(horizontal = 28.dp, vertical = 6.dp),
                             )
@@ -211,7 +219,7 @@ fun ChatDrawer(
                             if (threads.isEmpty()) {
                                 item(key = "pe-${p.id}") {
                                     Text(
-                                        "Boş. Bir sohbeti buraya taşımak için sohbete uzun bas.",
+                                        stringResource(R.string.folder_empty),
                                         color = C.TextFaint, fontSize = 14.sp,
                                         modifier = Modifier.padding(start = 64.dp, end = 20.dp, top = 2.dp, bottom = 8.dp),
                                     )
@@ -223,12 +231,12 @@ fun ChatDrawer(
                 }
             }
 
-            item { SectionHeader("Recent", recentOpen, { recentOpen = !recentOpen }) }
+            item { SectionHeader(stringResource(R.string.recent), recentOpen, { recentOpen = !recentOpen }) }
             if (recentOpen) {
                 if (recent.isEmpty() && !state.threadsLoading) {
                     item {
                         Text(
-                            if (query.isBlank()) "Henüz sohbet yok" else "Sonuç bulunamadı",
+                            stringResource(if (query.isBlank()) R.string.no_chats else R.string.no_results),
                             color = C.TextFaint, fontSize = 15.sp,
                             modifier = Modifier.padding(horizontal = 28.dp, vertical = 6.dp),
                         )
@@ -241,14 +249,14 @@ fun ChatDrawer(
     }
 
     renaming?.let { t ->
-        NameDialog("Yeniden adlandır", t.title, "Başlık", onDismiss = { renaming = null }) {
+        NameDialog(stringResource(R.string.rename), t.title, stringResource(R.string.title_placeholder), onDismiss = { renaming = null }) {
             vm.renameThread(t.id, it)
             renaming = null
         }
     }
     deleting?.let { t ->
         ConfirmDialog(
-            "Sohbet silinsin mi?", "\"${t.title.take(60)}\" bilgisayardaki Unsloth'tan da silinecek.",
+            stringResource(R.string.delete_chat_title), stringResource(R.string.delete_chat_message, t.title.take(60)),
             onDismiss = { deleting = null },
         ) {
             vm.deleteThread(t.id)
@@ -262,13 +270,13 @@ fun ChatDrawer(
         }
     }
     if (creatingFolder) {
-        NameDialog("Yeni klasör", "", "Klasör adı", onDismiss = { creatingFolder = false }) {
+        NameDialog(stringResource(R.string.new_folder), "", stringResource(R.string.folder_name), onDismiss = { creatingFolder = false }) {
             vm.createProject(it)
             creatingFolder = false
         }
     }
     renamingFolder?.let { p ->
-        NameDialog("Klasörü yeniden adlandır", p.name, "Klasör adı", onDismiss = { renamingFolder = null }) {
+        NameDialog(stringResource(R.string.rename_folder), p.name, stringResource(R.string.folder_name), onDismiss = { renamingFolder = null }) {
             vm.renameProject(p.id, it)
             renamingFolder = null
         }
@@ -276,9 +284,9 @@ fun ChatDrawer(
     deletingFolder?.let { p ->
         val count = state.threads.count { it.projectId == p.id }
         ConfirmDialog(
-            "Klasör silinsin mi?",
-            if (count == 0) "\"${p.name}\" silinecek."
-            else "\"${p.name}\" ve içindeki $count sohbet bilgisayardaki Unsloth'tan da silinecek. Sohbetleri saklamak istiyorsan önce klasörden çıkar.",
+            stringResource(R.string.delete_folder_title),
+            if (count == 0) stringResource(R.string.delete_folder_empty, p.name)
+            else pluralStringResource(R.plurals.delete_folder_with_chats, count, count, p.name),
             onDismiss = { deletingFolder = null },
         ) {
             vm.deleteProject(p.id)
@@ -294,10 +302,10 @@ private fun StudioTiles(onOpenPage: (Page) -> Unit) {
         Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        StudioTile(Icons.Outlined.ViewInAr, "Modeller", Modifier.weight(1f)) { onOpenPage(Page.Models) }
-        StudioTile(Icons.Outlined.Image, "Görsel", Modifier.weight(1f)) { onOpenPage(Page.Images) }
-        StudioTile(Icons.Outlined.Movie, "Video", Modifier.weight(1f)) { onOpenPage(Page.Videos) }
-        StudioTile(Icons.Outlined.RecordVoiceOver, "Ses", Modifier.weight(1f)) { onOpenPage(Page.Speech) }
+        StudioTile(Icons.Outlined.ViewInAr, stringResource(R.string.models), Modifier.weight(1f)) { onOpenPage(Page.Models) }
+        StudioTile(Icons.Outlined.Image, stringResource(R.string.image), Modifier.weight(1f)) { onOpenPage(Page.Images) }
+        StudioTile(Icons.Outlined.Movie, stringResource(R.string.video), Modifier.weight(1f)) { onOpenPage(Page.Videos) }
+        StudioTile(Icons.Outlined.RecordVoiceOver, stringResource(R.string.audio), Modifier.weight(1f)) { onOpenPage(Page.Speech) }
     }
 }
 
@@ -337,8 +345,8 @@ private fun FolderRow(p: ChatProject, count: Int, open: Boolean, onToggle: () ->
         ActionMenu(
             menu, { menu = false },
             listOf(
-                MenuAction("Yeniden adlandır", Icons.Rounded.Edit, onClick = onRename),
-                MenuAction("Sil", Icons.Rounded.Delete, danger = true, onClick = onDelete),
+                MenuAction(stringResource(R.string.rename), Icons.Rounded.Edit, onClick = onRename),
+                MenuAction(stringResource(R.string.delete), Icons.Rounded.Delete, danger = true, onClick = onDelete),
             ),
         )
     }
@@ -352,8 +360,8 @@ private fun NameDialog(title: String, initial: String, placeholder: String, onDi
         containerColor = C.SurfaceHigh,
         title = { Text(title) },
         text = { PillField(text, { text = it }, placeholder) },
-        confirmButton = { TextButton(onClick = { onSave(text.trim()) }, enabled = text.isNotBlank()) { Text("Kaydet") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("İptal", color = C.TextDim) } },
+        confirmButton = { TextButton(onClick = { onSave(text.trim()) }, enabled = text.isNotBlank()) { Text(stringResource(R.string.save)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel), color = C.TextDim) } },
     )
 }
 
@@ -362,22 +370,22 @@ private fun MoveDialog(t: ChatThread, projects: List<ChatProject>, onDismiss: ()
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = C.SurfaceHigh,
-        title = { Text("Klasöre taşı") },
+        title = { Text(stringResource(R.string.move_to_folder)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 if (projects.isEmpty()) {
-                    Text("Henüz klasör yok. Klasörler başlığındaki + ile oluşturabilirsin.", color = C.TextDim)
+                    Text(stringResource(R.string.move_no_folders), color = C.TextDim)
                 }
                 projects.forEach { p ->
                     MoveOption(Icons.Outlined.Folder, p.name, selected = t.projectId == p.id) { onMove(p.id) }
                 }
                 if (t.projectId != null) {
-                    MoveOption(Icons.Outlined.FolderOff, "Klasörden çıkar", selected = false) { onMove(null) }
+                    MoveOption(Icons.Outlined.FolderOff, stringResource(R.string.remove_from_folder), selected = false) { onMove(null) }
                 }
             }
         },
         confirmButton = {},
-        dismissButton = { TextButton(onClick = onDismiss) { Text("İptal", color = C.TextDim) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel), color = C.TextDim) } },
     )
 }
 
@@ -394,7 +402,7 @@ private fun MoveOption(icon: ImageVector, label: String, selected: Boolean, onCl
         Icon(icon, null, tint = C.TextDim, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(12.dp))
         Text(label, color = if (selected) C.TextFaint else C.Text, fontSize = 16.sp, modifier = Modifier.weight(1f))
-        if (selected) Icon(Icons.Rounded.Check, "Şu an burada", tint = C.TextFaint, modifier = Modifier.size(18.dp))
+        if (selected) Icon(Icons.Rounded.Check, stringResource(R.string.current_folder), tint = C.TextFaint, modifier = Modifier.size(18.dp))
     }
 }
 
@@ -444,7 +452,7 @@ private fun ThreadRow(
                 .padding(start = indent - 12.dp, end = 16.dp, top = 15.dp, bottom = 15.dp),
         ) {
             Text(
-                t.title.ifBlank { "Yeni sohbet" },
+                t.title.ifBlank { stringResource(R.string.new_chat) },
                 style = DrawerItemStyle,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -453,10 +461,10 @@ private fun ThreadRow(
         ActionMenu(
             menu, { menu = false },
             listOf(
-                MenuAction("Yeniden adlandır", Icons.Rounded.Edit, onClick = onRename),
-                MenuAction("Klasöre taşı", Icons.AutoMirrored.Outlined.DriveFileMove, onClick = onMove),
-                MenuAction("Dışa aktar / paylaş", Icons.Rounded.Share, onClick = onExport),
-                MenuAction("Sil", Icons.Rounded.Delete, danger = true, onClick = onDelete),
+                MenuAction(stringResource(R.string.rename), Icons.Rounded.Edit, onClick = onRename),
+                MenuAction(stringResource(R.string.move_to_folder), Icons.AutoMirrored.Outlined.DriveFileMove, onClick = onMove),
+                MenuAction(stringResource(R.string.export_share), Icons.Rounded.Share, onClick = onExport),
+                MenuAction(stringResource(R.string.delete), Icons.Rounded.Delete, danger = true, onClick = onDelete),
             ),
         )
     }

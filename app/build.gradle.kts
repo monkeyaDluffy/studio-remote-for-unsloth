@@ -63,6 +63,14 @@ android {
         compose = true
         buildConfig = true
     }
+    // Only the app's own languages, so library strings never show up in a third one.
+    androidResources {
+        localeFilters += listOf("en", "tr")
+    }
+    // The language is picked inside the app, so every translation has to ship with every install.
+    bundle {
+        language { enableSplit = false }
+    }
     packaging {
         // Sideloaded over KDE Connect: keep dex compressed (minSdk 28+ would store it raw, ~3x larger).
         dex { useLegacyPackaging = true }

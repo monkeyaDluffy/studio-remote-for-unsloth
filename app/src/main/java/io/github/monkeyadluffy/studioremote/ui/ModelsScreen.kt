@@ -38,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
@@ -47,6 +48,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.monkeyadluffy.studioremote.AppViewModel
 import io.github.monkeyadluffy.studioremote.DownloadJob
 import io.github.monkeyadluffy.studioremote.HubState
+import io.github.monkeyadluffy.studioremote.R
 import io.github.monkeyadluffy.studioremote.UiState
 import io.github.monkeyadluffy.studioremote.data.CachedRepo
 import io.github.monkeyadluffy.studioremote.data.GgufVariant
@@ -55,12 +57,13 @@ import io.github.monkeyadluffy.studioremote.data.TASK_SPEECH
 import io.github.monkeyadluffy.studioremote.data.TASK_VIDEO
 import io.github.monkeyadluffy.studioremote.downloadKey
 
+@Composable
 private fun taskLabel(task: String?): String = when (task) {
-    TASK_IMAGE -> "Görsel"
-    TASK_VIDEO -> "Video"
-    TASK_SPEECH -> "Ses"
-    "automatic-speech-recognition" -> "Sesten yazıya"
-    else -> "Sohbet"
+    TASK_IMAGE -> stringResource(R.string.image)
+    TASK_VIDEO -> stringResource(R.string.video)
+    TASK_SPEECH -> stringResource(R.string.audio)
+    "automatic-speech-recognition" -> stringResource(R.string.speech_to_text)
+    else -> stringResource(R.string.chat)
 }
 
 /** Model management: downloaded models, Hugging Face search, downloads, deletion and loading. */
@@ -80,10 +83,10 @@ fun ModelsScreen(vm: AppViewModel, state: UiState, onMenu: () -> Unit) {
         return
     }
     Column(Modifier.fillMaxSize()) {
-        ScreenHeader("Modeller", onMenu)
+        ScreenHeader(stringResource(R.string.models), onMenu)
         Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TabChip("İndirilenler", tab == 0) { tab = 0 }
-            TabChip("Hugging Face'te ara", tab == 1) { tab = 1 }
+            TabChip(stringResource(R.string.tab_downloaded), tab == 0) { tab = 0 }
+            TabChip(stringResource(R.string.tab_search_hf), tab == 1) { tab = 1 }
         }
         Spacer(Modifier.height(8.dp))
         if (tab == 0) LocalTab(vm, state, hub) else SearchTab(vm, hub)
@@ -95,15 +98,15 @@ private fun LocalTab(vm: AppViewModel, state: UiState, hub: HubState) {
     LazyColumn(Modifier.fillMaxSize()) {
         item { ActiveModelCard(vm, state) }
         if (hub.downloads.isNotEmpty()) {
-            item { ListLabel("İndiriliyor") }
+            item { ListLabel(stringResource(R.string.downloading)) }
             items(hub.downloads.values.toList(), key = { it.key }) { job ->
                 DownloadRow(job, onCancel = { vm.hub.cancel(job) })
             }
         }
-        item { ListLabel("Bilgisayardaki modeller") }
+        item { ListLabel(stringResource(R.string.models_on_computer)) }
         when {
             hub.localLoading && hub.local.isEmpty() -> item { SheetLoading() }
-            hub.local.isEmpty() -> item { SheetEmpty("İndirilmiş model yok. Hugging Face'te arayıp indirebilirsin.") }
+            hub.local.isEmpty() -> item { SheetEmpty(stringResource(R.string.no_local_models)) }
         }
         items(hub.local, key = { it.repoId }) { m -> LocalRow(m) { vm.hub.openRepo(m.repoId) } }
         item { Spacer(Modifier.height(24.dp)) }
@@ -114,20 +117,20 @@ private fun LocalTab(vm: AppViewModel, state: UiState, hub: HubState) {
 private fun ActiveModelCard(vm: AppViewModel, state: UiState) {
     val st = state.status
     val label = st?.label
-    InfoCard("Yüklü model") {
+    InfoCard(stringResource(R.string.loaded_model)) {
         when {
-            state.modelSwitching != null -> BusyRow("Yükleniyor: ${state.modelSwitching}")
-            st == null || label == null -> Text("Yok", color = C.Text, fontSize = 16.sp)
+            state.modelSwitching != null -> BusyRow(stringResource(R.string.loading_name, state.modelSwitching))
+            st == null || label == null -> Text(stringResource(R.string.none), color = C.Text, fontSize = 16.sp)
             else -> {
                 Text(label, color = C.Text, fontSize = 16.sp)
                 val details = buildList {
-                    st.contextLength?.let { add("Bağlam: ${formatTokens(it)}") }
+                    st.contextLength?.let { add(stringResource(R.string.context_value, formatTokens(it))) }
                     st.cacheTypeKv?.let { add("KV: $it") }
-                    if (st.isAudio) add("Ses modeli")
+                    if (st.isAudio) add(stringResource(R.string.speech_model))
                 }
                 if (details.isNotEmpty()) Text(details.joinToString(" · "), color = C.TextFaint, fontSize = 13.sp)
                 Spacer(Modifier.height(10.dp))
-                PillButton("Bellekten çıkar", primary = false, onClick = vm::unloadModel)
+                PillButton(stringResource(R.string.unload), primary = false, onClick = vm::unloadModel)
             }
         }
     }
@@ -153,14 +156,14 @@ private fun LocalRow(m: CachedRepo, onClick: () -> Unit) {
 private fun SearchTab(vm: AppViewModel, hub: HubState) {
     Column(Modifier.fillMaxSize()) {
         Box(Modifier.padding(horizontal = 16.dp)) {
-            PillField(hub.query, vm.hub::search, "Model ara (ör. qwen, gemma, llama)")
+            PillField(hub.query, vm.hub::search, stringResource(R.string.search_models_placeholder))
         }
         if (hub.searching) LoadingBar()
         LazyColumn(Modifier.fillMaxSize()) {
             if (hub.query.isBlank()) {
-                item { SheetEmpty("Hugging Face'teki GGUF modellerinde arar; en çok indirilenler üstte.") }
+                item { SheetEmpty(stringResource(R.string.search_models_hint)) }
             } else if (!hub.searching && hub.results.isEmpty()) {
-                item { SheetEmpty("Sonuç bulunamadı") }
+                item { SheetEmpty(stringResource(R.string.no_results)) }
             }
             items(hub.results, key = { it.id }) { m ->
                 val downloaded = hub.local.any { it.repoId.equals(m.id, ignoreCase = true) }
@@ -171,11 +174,11 @@ private fun SearchTab(vm: AppViewModel, hub: HubState) {
                     Column(Modifier.weight(1f)) {
                         Text(m.id.substringAfter('/'), color = C.Text, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(
-                            "${m.id.substringBefore('/')} · ${formatCount(m.downloads)} indirme · ${formatCount(m.likes)} beğeni",
+                            stringResource(R.string.hub_model_stats, m.id.substringBefore('/'), formatCount(m.downloads), formatCount(m.likes)),
                             color = C.TextFaint, fontSize = 13.sp, maxLines = 1,
                         )
                     }
-                    if (downloaded) Icon(Icons.Rounded.Check, "İndirilmiş", tint = C.Accent, modifier = Modifier.size(20.dp))
+                    if (downloaded) Icon(Icons.Rounded.Check, stringResource(R.string.already_downloaded), tint = C.Accent, modifier = Modifier.size(20.dp))
                 }
             }
             item { Spacer(Modifier.height(24.dp)) }
@@ -194,23 +197,23 @@ private fun RepoDetail(vm: AppViewModel, state: UiState, hub: HubState, repo: St
 
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            CircleButton(Icons.AutoMirrored.Rounded.ArrowBack, "Geri", onClick = vm.hub::closeRepo)
+            CircleButton(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back), onClick = vm.hub::closeRepo)
             Spacer(Modifier.size(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(repo.substringAfter('/'), color = C.Text, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Text(repo.substringBefore('/'), color = C.TextFaint, fontSize = 13.sp)
             }
-            if (local != null) IconTap(Icons.Rounded.Delete, "Tümünü sil", tint = C.Error) { deletingAll = true }
+            if (local != null) IconTap(Icons.Rounded.Delete, stringResource(R.string.delete_all), tint = C.Error) { deletingAll = true }
         }
         if (task == TASK_IMAGE || task == TASK_VIDEO) {
             Text(
-                "Bu bir ${taskLabel(task).lowercase()} modeli; yüklemek için menüdeki ${taskLabel(task)} sayfasını kullan.",
+                taskLabel(task).let { stringResource(R.string.task_page_hint, it.lowercase(), it) },
                 color = C.TextDim, fontSize = 14.sp, modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
             )
         }
         when {
             hub.variantsLoading -> SheetLoading()
-            hub.variants.isEmpty() -> SheetEmpty("Bu depoda GGUF dosyası bulunamadı.")
+            hub.variants.isEmpty() -> SheetEmpty(stringResource(R.string.no_gguf_in_repo))
             else -> LazyColumn(Modifier.fillMaxSize()) {
                 items(hub.variants, key = { it.quant }) { v ->
                     val job = hub.downloads[downloadKey(repo, v.quant)]
@@ -237,8 +240,8 @@ private fun RepoDetail(vm: AppViewModel, state: UiState, hub: HubState, repo: St
     }
     deleting?.let { v ->
         ConfirmDialog(
-            "${v.label} silinsin mi?",
-            "Bilgisayardan ${formatSize(v.sizeBytes)} yer açılır. Gerekirse tekrar indirebilirsin.",
+            stringResource(R.string.delete_variant_title, v.label),
+            stringResource(R.string.delete_variant_message, formatSize(v.sizeBytes)),
             onDismiss = { deleting = null },
         ) {
             vm.hub.delete(repo, v.quant)
@@ -247,8 +250,8 @@ private fun RepoDetail(vm: AppViewModel, state: UiState, hub: HubState, repo: St
     }
     if (deletingAll) {
         ConfirmDialog(
-            "Modelin tamamı silinsin mi?",
-            "${repo.substringAfter('/')} modelinin bilgisayardaki tüm dosyaları (${formatSize(local?.sizeBytes ?: 0)}) silinecek.",
+            stringResource(R.string.delete_model_title),
+            stringResource(R.string.delete_model_message, repo.substringAfter('/'), formatSize(local?.sizeBytes ?: 0)),
             onDismiss = { deletingAll = false },
         ) {
             vm.hub.delete(repo, null)
@@ -280,20 +283,20 @@ private fun VariantRow(
                     }
                 }
                 val note = when {
-                    v.downloaded -> "İndirildi"
-                    v.partial -> "Yarım kaldı, devam ettirilebilir"
+                    v.downloaded -> stringResource(R.string.variant_downloaded)
+                    v.partial -> stringResource(R.string.variant_partial)
                     else -> null
                 }
                 Text(listOfNotNull(formatSize(v.sizeBytes), note).joinToString(" · "), color = C.TextFaint, fontSize = 13.sp)
             }
             when {
-                job != null -> IconTap(Icons.Rounded.Close, "İndirmeyi durdur", size = 40.dp, iconSize = 20.dp, onClick = onCancel)
+                job != null -> IconTap(Icons.Rounded.Close, stringResource(R.string.stop_download), size = 40.dp, iconSize = 20.dp, onClick = onCancel)
                 v.downloaded -> {
-                    if (canLoad && !active) PillButton("Yükle", primary = true, onClick = onLoad)
+                    if (canLoad && !active) PillButton(stringResource(R.string.load), primary = true, onClick = onLoad)
                     Spacer(Modifier.size(4.dp))
-                    IconTap(Icons.Rounded.Delete, "Sil", size = 40.dp, iconSize = 20.dp, onClick = onDelete)
+                    IconTap(Icons.Rounded.Delete, stringResource(R.string.delete), size = 40.dp, iconSize = 20.dp, onClick = onDelete)
                 }
-                else -> IconTap(Icons.Rounded.Download, "İndir", size = 40.dp, iconSize = 22.dp, tint = C.Text, onClick = onDownload)
+                else -> IconTap(Icons.Rounded.Download, stringResource(R.string.download), size = 40.dp, iconSize = 22.dp, tint = C.Text, onClick = onDownload)
             }
         }
         job?.let { DownloadBar(it) }
@@ -308,7 +311,7 @@ private fun DownloadRow(job: DownloadJob, onCancel: () -> Unit) {
                 job.repoId.substringAfter('/') + (job.variant?.let { " · $it" } ?: ""),
                 color = C.Text, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
             )
-            IconTap(Icons.Rounded.Close, "İndirmeyi durdur", size = 36.dp, iconSize = 18.dp, onClick = onCancel)
+            IconTap(Icons.Rounded.Close, stringResource(R.string.stop_download), size = 36.dp, iconSize = 18.dp, onClick = onCancel)
         }
         DownloadBar(job)
     }
@@ -319,7 +322,7 @@ private fun DownloadBar(job: DownloadJob) {
     ThinProgress(job.progress, Modifier.padding(top = 6.dp))
     val total = if (job.expectedBytes > 0) " / ${formatSize(job.expectedBytes)}" else ""
     Text(
-        "%${(job.progress * 100).toInt()} · ${formatSize(job.downloadedBytes)}$total",
+        stringResource(R.string.download_progress, (job.progress * 100).toInt(), formatSize(job.downloadedBytes)) + total,
         color = C.TextFaint, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp),
     )
 }
@@ -333,29 +336,31 @@ private fun LoadOptionsDialog(repo: String, v: GgufVariant, onDismiss: () -> Uni
     var ctx by remember { mutableIntStateOf(0) }
     var kv by remember { mutableStateOf<String?>(null) }
     var layers by remember { mutableStateOf("") }
+    val auto = stringResource(R.string.auto)
+    val default = stringResource(R.string.default_value)
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = C.SurfaceHigh,
         title = { Text("${repo.substringAfter('/')} · ${v.label}", fontSize = 18.sp) },
         text = {
             Column {
-                SectionLabel("Bağlam uzunluğu")
-                ChoiceChips(CONTEXT_CHOICES, ctx, { if (it == 0) "Otomatik" else formatTokens(it) }) { ctx = it }
-                Text("Uzun bağlam daha çok bellek ister.", color = C.TextFaint, fontSize = 12.sp, modifier = Modifier.padding(start = 4.dp, top = 4.dp))
+                SectionLabel(stringResource(R.string.context_length))
+                ChoiceChips(CONTEXT_CHOICES, ctx, { if (it == 0) auto else formatTokens(it) }) { ctx = it }
+                Text(stringResource(R.string.context_length_hint), color = C.TextFaint, fontSize = 12.sp, modifier = Modifier.padding(start = 4.dp, top = 4.dp))
                 Spacer(Modifier.height(14.dp))
-                SectionLabel("KV önbellek hassasiyeti")
-                ChoiceChips(KV_CHOICES, kv, { it ?: "Varsayılan" }) { kv = it }
-                Text("q8_0 / q4_0 belleği azaltır, kaliteyi biraz düşürür.", color = C.TextFaint, fontSize = 12.sp, modifier = Modifier.padding(start = 4.dp, top = 4.dp))
+                SectionLabel(stringResource(R.string.kv_cache_precision))
+                ChoiceChips(KV_CHOICES, kv, { it ?: default }) { kv = it }
+                Text(stringResource(R.string.kv_cache_hint), color = C.TextFaint, fontSize = 12.sp, modifier = Modifier.padding(start = 4.dp, top = 4.dp))
                 Spacer(Modifier.height(14.dp))
-                SectionLabel("GPU katman sayısı (boş = otomatik)")
+                SectionLabel(stringResource(R.string.gpu_layers))
                 PillField(
-                    layers, { t -> layers = t.filter(Char::isDigit).take(4) }, "Otomatik", container = C.Surface,
+                    layers, { t -> layers = t.filter(Char::isDigit).take(4) }, auto, container = C.Surface,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 )
             }
         },
-        confirmButton = { TextButton(onClick = { onLoad(ctx, layers.toIntOrNull() ?: -1, kv) }) { Text("Yükle") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("İptal", color = C.TextDim) } },
+        confirmButton = { TextButton(onClick = { onLoad(ctx, layers.toIntOrNull() ?: -1, kv) }) { Text(stringResource(R.string.load)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel), color = C.TextDim) } },
     )
 }
 

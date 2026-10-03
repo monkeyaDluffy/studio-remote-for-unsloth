@@ -4,6 +4,7 @@ import io.github.monkeyadluffy.studioremote.data.Api
 import io.github.monkeyadluffy.studioremote.data.CachedRepo
 import io.github.monkeyadluffy.studioremote.data.GgufVariant
 import io.github.monkeyadluffy.studioremote.data.HubModel
+import io.github.monkeyadluffy.studioremote.data.LocalizedException
 import io.github.monkeyadluffy.studioremote.data.activeDownloads
 import io.github.monkeyadluffy.studioremote.data.allCachedModels
 import io.github.monkeyadluffy.studioremote.data.cancelDownload
@@ -165,7 +166,7 @@ class ModelHub(
                         }
                         "error" -> {
                             finished = true
-                            throw IllegalStateException(status.error ?: "İndirme başarısız")
+                            throw LocalizedException(R.string.download_failed, status.error)
                         }
                         // Studio doesn't know this download by this name; stop rather than poll forever.
                         "idle" -> if (++idle >= 3) {

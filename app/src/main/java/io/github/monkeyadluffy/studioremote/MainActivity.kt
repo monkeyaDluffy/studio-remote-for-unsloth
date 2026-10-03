@@ -1,6 +1,7 @@
 package io.github.monkeyadluffy.studioremote
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Build
@@ -29,6 +30,8 @@ class MainActivity : ComponentActivity() {
     /** Needed for the "replying…" and "reply ready" notifications on Android 13+. */
     private val notificationPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
     private var askedNotifications = false
+
+    override fun attachBaseContext(newBase: Context) = super.attachBaseContext(AppLanguage.wrap(newBase))
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge(

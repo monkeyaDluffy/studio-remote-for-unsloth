@@ -1,5 +1,6 @@
 package io.github.monkeyadluffy.studioremote.data
 
+import io.github.monkeyadluffy.studioremote.R
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.buildJsonObject
@@ -177,7 +178,7 @@ suspend fun Api.speech(text: String): ByteArray {
         // A padded slow answer can still carry an error instead of audio.
         if (bytes.isNotEmpty() && (bytes[0] == ' '.code.toByte() || bytes[0] == '{'.code.toByte())) {
             val err = parseObject(bytes.decodeToString().trim())
-            if (err != null) throw ApiException(500, (err["_deferred_error"] ?: err["detail"])?.let(::resultText) ?: "Ses üretilemedi")
+            if (err != null) throw ApiException(500, (err["_deferred_error"] ?: err["detail"])?.let(::resultText), R.string.speech_failed)
         }
         bytes
     }

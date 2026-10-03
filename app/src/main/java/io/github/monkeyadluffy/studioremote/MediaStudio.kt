@@ -6,6 +6,7 @@ import io.github.monkeyadluffy.studioremote.data.ApiException
 import io.github.monkeyadluffy.studioremote.data.CachedRepo
 import io.github.monkeyadluffy.studioremote.data.GalleryItem
 import io.github.monkeyadluffy.studioremote.data.GgufVariant
+import io.github.monkeyadluffy.studioremote.data.LocalizedException
 import io.github.monkeyadluffy.studioremote.data.MediaKind
 import io.github.monkeyadluffy.studioremote.data.MediaProgress
 import io.github.monkeyadluffy.studioremote.data.MediaStatus
@@ -138,7 +139,7 @@ class MediaStudio(
         }
         val variants = api.variants(model.repoId).variants.filter { it.downloaded && it.filename.isNotEmpty() }
         when (variants.size) {
-            0 -> report(IllegalStateException("Bu modelin indirilmiş dosyası yok"))
+            0 -> report(LocalizedException(R.string.no_downloaded_file))
             1 -> load(kind, model.repoId, variants[0].filename, "${model.repoId} · ${variants[0].label}")
             else -> page(kind).update { it.copy(picking = model.repoId to variants) }
         }

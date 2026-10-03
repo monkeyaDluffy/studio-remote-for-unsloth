@@ -1,5 +1,8 @@
 package io.github.monkeyadluffy.studioremote.ui
 
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import io.github.monkeyadluffy.studioremote.R
 import java.util.Locale
 
 // Human-readable numbers shown across the screens.
@@ -21,10 +24,13 @@ fun formatCount(n: Long): String = when {
 }
 
 /** Thinking time: whole seconds, then minutes. */
+@Composable
 fun formatDuration(ms: Long): String {
-    val s = ms / 1000
-    return if (s < 60) "${maxOf(s, 1)} sn" else "${s / 60} dk ${s % 60} sn"
+    val s = (ms / 1000).toInt()
+    return if (s < 60) stringResource(R.string.duration_seconds, maxOf(s, 1))
+    else stringResource(R.string.duration_minutes, s / 60, s % 60)
 }
 
-/** Clip and audio lengths: 2.987 → "3.0 sn". */
-fun formatSeconds(seconds: Double): String = String.format(Locale.US, "%.1f sn", seconds)
+/** Clip and audio lengths: 2.987 → "3.0 s". */
+@Composable
+fun formatSeconds(seconds: Double): String = stringResource(R.string.duration_seconds_decimal, seconds)

@@ -17,6 +17,7 @@ Studio Remote connects to a Studio server that **you** run (on your PC, home ser
 - **Voice:** speech-to-text (Studio's STT, or Android's speech recognizer for dictation).
 - **Tool confirmation:** approve or deny tool calls from the phone.
 - **Background generation:** long generations keep running with a notification while the app is in the background.
+- **Languages:** English and Turkish, chosen in Settings → Appearance (gear icon in the side menu).
 
 ## Requirements
 
@@ -71,6 +72,8 @@ Open the project in Android Studio (or use the command line, JDK 17+ and the And
 To sign release builds, copy `keystore.properties.example` to `keystore.properties` and fill it in. Without that file the release APK is built unsigned and you can sign it yourself with `apksigner`. Never commit `keystore.properties` or the `.jks` file.
 
 ## Support
+
+Translations are welcome: copy `app/src/main/res/values/strings.xml` to `values-<language>/strings.xml`, translate it and add the language to `AppLanguage.kt` and `localeFilters` in `app/build.gradle.kts`.
 
 Bugs and feature requests: open an issue. When reporting, include your Android version, Studio version and what you did.
 

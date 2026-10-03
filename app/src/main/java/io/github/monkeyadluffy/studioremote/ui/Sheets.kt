@@ -47,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
@@ -55,6 +56,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import io.github.monkeyadluffy.studioremote.AppViewModel
 import io.github.monkeyadluffy.studioremote.BuildConfig
+import io.github.monkeyadluffy.studioremote.R
 import io.github.monkeyadluffy.studioremote.UiState
 import io.github.monkeyadluffy.studioremote.data.normalizeServerUrl
 import java.util.Locale
@@ -67,25 +69,25 @@ fun ModelSheet(vm: AppViewModel, state: UiState, onManage: () -> Unit, onDismiss
             val active = state.status
             if (variants == null) {
                 Row(Modifier.padding(start = 24.dp, end = 16.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("Modeller", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = C.Text, modifier = Modifier.weight(1f))
-                    PillButton("İndir / yönet", primary = false, onClick = onManage)
+                    Text(stringResource(R.string.models), fontSize = 22.sp, fontWeight = FontWeight.Bold, color = C.Text, modifier = Modifier.weight(1f))
+                    PillButton(stringResource(R.string.download_manage), primary = false, onClick = onManage)
                 }
                 active?.label?.let { label ->
                     Row(Modifier.padding(start = 24.dp, end = 16.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(8.dp).clip(CircleShape).background(C.Accent))
                         Spacer(Modifier.size(8.dp))
                         Text(
-                            "Aktif: $label", color = C.TextDim, fontSize = 14.sp, maxLines = 2,
+                            stringResource(R.string.active_model, label), color = C.TextDim, fontSize = 14.sp, maxLines = 2,
                             overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
                         )
                         Spacer(Modifier.size(8.dp))
-                        PillButton("Bellekten çıkar", primary = false) { vm.unloadModel(); onDismiss() }
+                        PillButton(stringResource(R.string.unload), primary = false) { vm.unloadModel(); onDismiss() }
                     }
                 }
                 Spacer(Modifier.height(8.dp))
                 when {
                     state.modelsLoading -> SheetLoading()
-                    state.models.isEmpty() -> SheetEmpty("İndirilmiş GGUF model bulunamadı.")
+                    state.models.isEmpty() -> SheetEmpty(stringResource(R.string.no_downloaded_gguf))
                     else -> LazyColumn(Modifier.heightIn(max = 520.dp)) {
                         items(state.models, key = { it.repoId }) { m ->
                             SheetRow(
@@ -99,7 +101,7 @@ fun ModelSheet(vm: AppViewModel, state: UiState, onManage: () -> Unit, onDismiss
                 }
             } else {
                 Row(Modifier.padding(horizontal = 12.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    CircleButton(Icons.AutoMirrored.Rounded.ArrowBack, "Geri", size = 44.dp, iconSize = 22.dp, background = C.SurfaceHigh) {
+                    CircleButton(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back), size = 44.dp, iconSize = 22.dp, background = C.SurfaceHigh) {
                         vm.clearVariants()
                     }
                     Spacer(Modifier.size(12.dp))
@@ -111,7 +113,7 @@ fun ModelSheet(vm: AppViewModel, state: UiState, onManage: () -> Unit, onDismiss
                 Spacer(Modifier.height(8.dp))
                 when {
                     state.variantsLoading -> SheetLoading()
-                    variants.variants.isEmpty() -> SheetEmpty("İndirilmiş varyant yok.")
+                    variants.variants.isEmpty() -> SheetEmpty(stringResource(R.string.no_downloaded_variants))
                     else -> LazyColumn(Modifier.heightIn(max = 520.dp)) {
                         items(variants.variants, key = { it.quant }) { v ->
                             SheetRow(
@@ -165,18 +167,18 @@ fun SettingsSheet(vm: AppViewModel, state: UiState, onDismiss: () -> Unit) {
             }
             Spacer(Modifier.height(24.dp))
 
-            SectionLabel("Sunucu adresi (tünel linki değişirse güncelle)")
+            SectionLabel(stringResource(R.string.server_address_update))
             PillField(
                 url, { url = it }, "https://…trycloudflare.com", container = C.SurfaceHigh,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
             )
             Spacer(Modifier.height(16.dp))
-            SectionLabel("Görünen ad")
-            PillField(name, { name = it }, "Adın", container = C.SurfaceHigh)
+            SectionLabel(stringResource(R.string.display_name))
+            PillField(name, { name = it }, stringResource(R.string.your_name), container = C.SurfaceHigh)
             Spacer(Modifier.height(20.dp))
 
             Row {
-                Text("Sıcaklık", color = C.Text, fontSize = 17.sp, modifier = Modifier.weight(1f))
+                Text(stringResource(R.string.temperature), color = C.Text, fontSize = 17.sp, modifier = Modifier.weight(1f))
                 Text(String.format(Locale.US, "%.2f", temperature), color = C.TextDim, fontSize = 15.sp)
             }
             Slider(
@@ -184,8 +186,8 @@ fun SettingsSheet(vm: AppViewModel, state: UiState, onDismiss: () -> Unit) {
                 colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color.White, inactiveTrackColor = C.SurfaceHigh),
             )
             Spacer(Modifier.height(12.dp))
-            SectionLabel("Sistem komutu")
-            PillField(systemPrompt, { systemPrompt = it }, "İsteğe bağlı", singleLine = false, container = C.SurfaceHigh)
+            SectionLabel(stringResource(R.string.system_prompt))
+            PillField(systemPrompt, { systemPrompt = it }, stringResource(R.string.optional), singleLine = false, container = C.SurfaceHigh)
             Spacer(Modifier.height(28.dp))
 
             DictationRow(state.settings.studioDictation, vm::setStudioDictation)
@@ -194,7 +196,7 @@ fun SettingsSheet(vm: AppViewModel, state: UiState, onDismiss: () -> Unit) {
                 BackgroundAccessRow()
             }
             Spacer(Modifier.height(20.dp))
-            PrimaryButton("Kaydet", onClick = ::saveAndClose)
+            PrimaryButton(stringResource(R.string.save), onClick = ::saveAndClose)
             Spacer(Modifier.height(12.dp))
             Row(
                 Modifier
@@ -207,7 +209,7 @@ fun SettingsSheet(vm: AppViewModel, state: UiState, onDismiss: () -> Unit) {
             ) {
                 Icon(Icons.AutoMirrored.Rounded.Logout, null, tint = C.Error, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.size(8.dp))
-                Text("Çıkış yap", color = C.Error, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.log_out), color = C.Error, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             }
         }
     }
@@ -227,9 +229,8 @@ private fun BackgroundAccessRow() {
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { exempt = isExempt() }
 
     SettingRow(
-        "Arka planda çalışma",
-        if (exempt) "İzin verildi: ekran kapalıyken de cevap yazılmaya devam eder"
-        else "Ekran kapanınca bağlantı kopmasın diye pil kısıtlamasını kaldır",
+        stringResource(R.string.background_title),
+        stringResource(if (exempt) R.string.background_on else R.string.background_off),
         onClick = if (exempt) null else ({
             val request = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, "package:${context.packageName}".toUri())
             runCatching { launcher.launch(request) }
@@ -238,7 +239,7 @@ private fun BackgroundAccessRow() {
         }),
     ) {
         if (exempt) Icon(Icons.Rounded.Check, null, tint = C.Accent, modifier = Modifier.size(22.dp))
-        else Text("İzin ver", color = C.Text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        else Text(stringResource(R.string.allow), color = C.Text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -266,8 +267,8 @@ private fun SettingRow(title: String, description: String, onClick: (() -> Unit)
 @Composable
 private fun DictationRow(on: Boolean, onChange: (Boolean) -> Unit) {
     SettingRow(
-        "Sesle yazmada Studio Whisper",
-        "Mikrofon sesini bilgisayardaki Whisper yazıya döker; kapalıyken telefonun kendi ses tanıması kullanılır",
+        stringResource(R.string.dictation_title),
+        stringResource(R.string.dictation_description),
         onClick = { onChange(!on) },
     ) {
         Switch(checked = on, onCheckedChange = onChange, colors = appSwitchColors())
@@ -286,11 +287,11 @@ private fun SheetRow(title: String, subtitle: String, active: Boolean, vision: B
                 Text(subtitle, color = C.TextFaint, fontSize = 13.sp)
                 if (vision) {
                     Spacer(Modifier.size(6.dp))
-                    Icon(Icons.Rounded.Visibility, "Görsel destekli", tint = C.TextFaint, modifier = Modifier.size(14.dp))
+                    Icon(Icons.Rounded.Visibility, stringResource(R.string.supports_images), tint = C.TextFaint, modifier = Modifier.size(14.dp))
                 }
             }
         }
-        if (active) Icon(Icons.Rounded.Check, "Aktif", tint = C.Accent, modifier = Modifier.size(22.dp))
+        if (active) Icon(Icons.Rounded.Check, stringResource(R.string.active), tint = C.Accent, modifier = Modifier.size(22.dp))
     }
 }
 

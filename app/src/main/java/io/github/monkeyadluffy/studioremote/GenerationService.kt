@@ -21,14 +21,16 @@ class GenerationService : Service() {
     private var wakeLock: PowerManager.WakeLock? = null
     private var wifiLock: WifiManager.WifiLock? = null
 
+    override fun attachBaseContext(newBase: Context) = super.attachBaseContext(AppLanguage.wrap(newBase))
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         ensureChannels(this)
         val notification = Notification.Builder(this, CHANNEL_WORKING)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle("Studio Remote")
-            .setContentText("Studio yanıt yazıyor…")
+            .setContentTitle(getString(R.string.notification_title))
+            .setContentText(getString(R.string.notification_writing))
             .setOngoing(true)
             .setContentIntent(openAppIntent(this))
             .build()
@@ -91,11 +93,12 @@ class GenerationService : Service() {
         }
 
         /** Posts a "reply ready" notification; used when the reply finished off-screen. */
-        fun notifyDone(context: Context, preview: String) {
+        fun notifyDone(appContext: Context, preview: String) {
+            val context = AppLanguage.wrap(appContext)
             ensureChannels(context)
             val notification = Notification.Builder(context, CHANNEL_DONE)
                 .setSmallIcon(R.drawable.ic_launcher_foreground)
-                .setContentTitle("Cevap hazır")
+                .setContentTitle(context.getString(R.string.notification_ready))
                 .setContentText(preview.take(120))
                 .setStyle(Notification.BigTextStyle().bigText(preview.take(400)))
                 .setContentIntent(openAppIntent(context))
@@ -113,11 +116,11 @@ class GenerationService : Service() {
         private fun ensureChannels(context: Context) {
             val nm = context.getSystemService(NotificationManager::class.java)
             nm.createNotificationChannel(
-                NotificationChannel(CHANNEL_WORKING, "Yanıt yazılıyor", NotificationManager.IMPORTANCE_LOW)
+                NotificationChannel(CHANNEL_WORKING, context.getString(R.string.channel_working), NotificationManager.IMPORTANCE_LOW)
                     .apply { setShowBadge(false) }
             )
             nm.createNotificationChannel(
-                NotificationChannel(CHANNEL_DONE, "Hazır cevaplar", NotificationManager.IMPORTANCE_DEFAULT)
+                NotificationChannel(CHANNEL_DONE, context.getString(R.string.channel_done), NotificationManager.IMPORTANCE_DEFAULT)
             )
         }
     }

@@ -51,19 +51,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.monkeyadluffy.studioremote.AppViewModel
+import io.github.monkeyadluffy.studioremote.R
 import io.github.monkeyadluffy.studioremote.UiState
 import io.github.monkeyadluffy.studioremote.data.Conversation
 import io.github.monkeyadluffy.studioremote.data.UiMessage
 import kotlinx.coroutines.launch
 
 /** Full-screen pages reachable from the drawer, besides the chat. */
-enum class Page { Chat, Models, Images, Videos, Speech }
+enum class Page { Chat, Models, Images, Videos, Speech, Settings }
 
 @Composable
 fun MainScreen(vm: AppViewModel, state: UiState) {
@@ -136,6 +138,7 @@ fun MainScreen(vm: AppViewModel, state: UiState) {
                     Page.Images -> ImageScreen(vm, openMenu)
                     Page.Videos -> VideoScreen(vm, openMenu)
                     Page.Speech -> SpeechScreen(vm, state, openMenu) { page = Page.Models }
+                    Page.Settings -> SettingsScreen(openMenu)
                 }
             }
             SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(bottom = 110.dp))
@@ -158,18 +161,18 @@ private fun EditMessageDialog(m: UiMessage, onDismiss: () -> Unit, onSend: (Stri
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = C.SurfaceHigh,
-        title = { Text("Mesajı düzenle") },
+        title = { Text(stringResource(R.string.edit_message_title)) },
         text = {
             Column {
                 Text(
-                    "Yeni bir dal olarak gönderilir; eski cevap kaybolmaz, oklarla geri dönebilirsin.",
+                    stringResource(R.string.edit_message_hint),
                     color = C.TextDim, fontSize = 13.sp, modifier = Modifier.padding(bottom = 10.dp),
                 )
-                PillField(text, { text = it }, "Mesaj", singleLine = false, container = C.Surface)
+                PillField(text, { text = it }, stringResource(R.string.message_placeholder), singleLine = false, container = C.Surface)
             }
         },
-        confirmButton = { TextButton(onClick = { onSend(text) }, enabled = text.isNotBlank()) { Text("Gönder") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("İptal", color = C.TextDim) } },
+        confirmButton = { TextButton(onClick = { onSend(text) }, enabled = text.isNotBlank()) { Text(stringResource(R.string.send)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel), color = C.TextDim) } },
     )
 }
 
@@ -179,7 +182,7 @@ private fun TopBar(state: UiState, onMenu: () -> Unit, onModels: () -> Unit, onN
         Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        CircleButton(Icons.Rounded.Menu, "Menü", onClick = onMenu)
+        CircleButton(Icons.Rounded.Menu, stringResource(R.string.menu), onClick = onMenu)
         Spacer(Modifier.size(10.dp))
         Row(
             Modifier
@@ -195,7 +198,7 @@ private fun TopBar(state: UiState, onMenu: () -> Unit, onModels: () -> Unit, onN
                 Spinner(14.dp, color = C.Text, stroke = 2.dp)
                 Spacer(Modifier.size(8.dp))
             }
-            val label = if (state.modelSwitching != null) "Yükleniyor…" else state.status?.label ?: "Model seç"
+            val label = if (state.modelSwitching != null) stringResource(R.string.loading) else state.status?.label ?: stringResource(R.string.choose_model)
             Text(
                 middleEllipsize(label, 26),
                 color = C.Text, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -205,7 +208,7 @@ private fun TopBar(state: UiState, onMenu: () -> Unit, onModels: () -> Unit, onN
             Icon(Icons.Rounded.KeyboardArrowDown, null, tint = C.Text, modifier = Modifier.size(20.dp))
         }
         Spacer(Modifier.size(10.dp))
-        CircleButton(Icons.Outlined.EditNote, "Yeni sohbet", onClick = onNewChat)
+        CircleButton(Icons.Outlined.EditNote, stringResource(R.string.new_chat), onClick = onNewChat)
     }
 }
 
@@ -224,7 +227,7 @@ private fun EmptyState(state: UiState, onPickModel: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            "Hello, ${state.settings.shownName}",
+            stringResource(R.string.greeting, state.settings.shownName),
             style = MaterialTheme.typography.headlineMedium,
             color = C.Text,
             textAlign = TextAlign.Center,
@@ -240,10 +243,10 @@ private fun EmptyState(state: UiState, onPickModel: () -> Unit) {
                     .clickable(onClick = onPickModel)
                     .padding(horizontal = 24.dp, vertical = 18.dp),
             ) {
-                Text("Yüklü model yok", color = C.Text, fontWeight = FontWeight.Bold, fontSize = 19.sp)
+                Text(stringResource(R.string.no_model_loaded), color = C.Text, fontWeight = FontWeight.Bold, fontSize = 19.sp)
                 Spacer(Modifier.size(2.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Bir model seçmek için dokun", color = C.TextDim, fontSize = 15.sp)
+                    Text(stringResource(R.string.tap_to_choose_model), color = C.TextDim, fontSize = 15.sp)
                     Spacer(Modifier.size(4.dp))
                     Icon(Icons.AutoMirrored.Rounded.ArrowForward, null, tint = C.TextDim, modifier = Modifier.size(16.dp))
                 }

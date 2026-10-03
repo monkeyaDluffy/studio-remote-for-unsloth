@@ -8,6 +8,7 @@ import android.provider.MediaStore
 import android.widget.MediaController
 import android.widget.Toast
 import android.widget.VideoView
+import androidx.annotation.StringRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -56,6 +57,8 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -67,6 +70,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.monkeyadluffy.studioremote.AppViewModel
 import io.github.monkeyadluffy.studioremote.MediaPageState
 import io.github.monkeyadluffy.studioremote.MediaStudio
+import io.github.monkeyadluffy.studioremote.R
 import io.github.monkeyadluffy.studioremote.data.GalleryItem
 import io.github.monkeyadluffy.studioremote.data.MediaKind
 import io.github.monkeyadluffy.studioremote.data.galleryFilePath
@@ -77,11 +81,14 @@ import java.io.File
 
 // ---------------- images ----------------
 
-private class ImageSize(val label: String, val w: Int, val h: Int) {
-    override fun toString() = "$label $w×$h"
-}
+private class ImageSize(@param:StringRes val label: Int, val w: Int, val h: Int)
 
-private val IMAGE_SIZES = listOf(ImageSize("Kare", 1024, 1024), ImageSize("Dikey", 768, 1344), ImageSize("Yatay", 1344, 768), ImageSize("Küçük", 512, 512))
+private val IMAGE_SIZES = listOf(
+    ImageSize(R.string.size_square, 1024, 1024),
+    ImageSize(R.string.size_portrait, 768, 1344),
+    ImageSize(R.string.size_landscape, 1344, 768),
+    ImageSize(R.string.size_small, 512, 512),
+)
 private val IMAGE_STEPS = listOf(4, 9, 20, 28)
 
 @Composable
@@ -92,25 +99,27 @@ fun ImageScreen(vm: AppViewModel, onMenu: () -> Unit) {
     var steps by rememberSaveable { mutableIntStateOf(IMAGE_STEPS[1]) }
     val size = IMAGE_SIZES[sizeIndex]
     var viewing by remember { mutableStateOf<GalleryItem?>(null) }
+    val sizeLabels = IMAGE_SIZES.associateWith { "${stringResource(it.label)} ${it.w}×${it.h}" }
+    val stepLabels = IMAGE_STEPS.associateWith { pluralStringResource(R.plurals.steps, it, it) }
     LaunchedEffect(Unit) { vm.media.open(MediaKind.Image) }
 
     MediaGrid(columns = 2) {
-        fullRow { ScreenHeader("Görsel üret", onMenu) }
-        fullRow { MediaModelCard(vm, MediaKind.Image, page, "görsel") }
+        fullRow { ScreenHeader(stringResource(R.string.generate_image), onMenu) }
+        fullRow { MediaModelCard(vm, MediaKind.Image, page, stringResource(R.string.noun_image)) }
         fullRow {
             Column(Modifier.padding(horizontal = 16.dp)) {
-                PillField(prompt, { prompt = it }, "Ne çizilsin? (İngilizce daha iyi sonuç verir)", singleLine = false)
+                PillField(prompt, { prompt = it }, stringResource(R.string.image_prompt), singleLine = false)
                 Spacer(Modifier.height(10.dp))
-                ChoiceChips(IMAGE_SIZES, size, ImageSize::toString) { sizeIndex = IMAGE_SIZES.indexOf(it) }
+                ChoiceChips(IMAGE_SIZES, size, sizeLabels::getValue) { sizeIndex = IMAGE_SIZES.indexOf(it) }
                 Spacer(Modifier.height(6.dp))
-                ChoiceChips(IMAGE_STEPS, steps, { "$it adım" }) { steps = it }
+                ChoiceChips(IMAGE_STEPS, steps, stepLabels::getValue) { steps = it }
                 Spacer(Modifier.height(12.dp))
                 GenerateButton(page, enabled = prompt.isNotBlank() && page.status?.loaded == true, onCancel = { vm.media.cancel(MediaKind.Image) }) {
                     vm.media.generateImage(prompt.trim(), size.w, size.h, steps, seed = null)
                 }
             }
         }
-        galleryHeader(page, "Henüz görsel yok")
+        galleryHeader(page, R.string.no_images)
         items(page.gallery, key = { it.id }) { item ->
             RemoteImage(
                 vm.media, galleryFilePath(MediaKind.Image.base, item.id, thumb = true),
@@ -143,18 +152,19 @@ fun VideoScreen(vm: AppViewModel, onMenu: () -> Unit) {
     var prompt by rememberSaveable { mutableStateOf("") }
     var frames by rememberSaveable { mutableStateOf<Int?>(null) }
     var viewing by remember { mutableStateOf<GalleryItem?>(null) }
+    val frameLabels = VIDEO_FRAMES.associateWith { n -> n?.let { pluralStringResource(R.plurals.frames, it, it) } ?: stringResource(R.string.default_length) }
     LaunchedEffect(Unit) { vm.media.open(MediaKind.Video) }
 
     MediaGrid(columns = 1) {
-        fullRow { ScreenHeader("Video üret", onMenu) }
-        fullRow { MediaModelCard(vm, MediaKind.Video, page, "video") }
+        fullRow { ScreenHeader(stringResource(R.string.generate_video), onMenu) }
+        fullRow { MediaModelCard(vm, MediaKind.Video, page, stringResource(R.string.noun_video)) }
         fullRow {
             Column(Modifier.padding(horizontal = 16.dp)) {
-                PillField(prompt, { prompt = it }, "Videoda ne olsun?", singleLine = false)
+                PillField(prompt, { prompt = it }, stringResource(R.string.video_prompt), singleLine = false)
                 Spacer(Modifier.height(10.dp))
-                ChoiceChips(VIDEO_FRAMES, frames, { it?.let { n -> "$n kare" } ?: "Varsayılan uzunluk" }) { frames = it }
+                ChoiceChips(VIDEO_FRAMES, frames, frameLabels::getValue) { frames = it }
                 Text(
-                    "Video üretmek dakikalar sürebilir; uygulamayı kapatsan da bilgisayarda devam eder.",
+                    stringResource(R.string.video_hint),
                     color = C.TextFaint, fontSize = 12.5.sp, modifier = Modifier.padding(start = 4.dp, top = 6.dp),
                 )
                 Spacer(Modifier.height(12.dp))
@@ -163,7 +173,7 @@ fun VideoScreen(vm: AppViewModel, onMenu: () -> Unit) {
                 }
             }
         }
-        galleryHeader(page, "Henüz video yok")
+        galleryHeader(page, R.string.no_videos)
         items(page.gallery, key = { it.id }) { item -> VideoRow(item) { viewing = item } }
     }
 
@@ -219,9 +229,9 @@ private fun VideoRow(item: GalleryItem, onClick: () -> Unit) {
         }
         Spacer(Modifier.size(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(item.prompt.orEmpty().ifBlank { "Video" }, color = C.Text, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(item.prompt.orEmpty().ifBlank { stringResource(R.string.video) }, color = C.Text, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
             val meta = listOfNotNull(
-                item.durationS?.let(::formatSeconds),
+                item.durationS?.let { formatSeconds(it) },
                 if (item.width != null && item.height != null) "${item.width}×${item.height}" else null,
             )
             if (meta.isNotEmpty()) Text(meta.joinToString(" · "), color = C.TextFaint, fontSize = 12.5.sp)
@@ -245,17 +255,17 @@ fun MediaGrid(columns: Int, content: LazyGridScope.() -> Unit) {
     )
 }
 
-fun LazyGridScope.galleryHeader(loading: Boolean, empty: Boolean, emptyText: String) {
+fun LazyGridScope.galleryHeader(loading: Boolean, empty: Boolean, @StringRes emptyText: Int) {
     fullRow {
         Row(Modifier.padding(start = 16.dp, top = 20.dp, bottom = 6.dp, end = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("Galeri", color = C.Text, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            Text(stringResource(R.string.gallery), color = C.Text, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
             if (loading) Spinner(16.dp)
         }
     }
-    if (empty && !loading) fullRow { SheetEmpty(emptyText) }
+    if (empty && !loading) fullRow { SheetEmpty(stringResource(emptyText)) }
 }
 
-private fun LazyGridScope.galleryHeader(page: MediaPageState, emptyText: String) =
+private fun LazyGridScope.galleryHeader(page: MediaPageState, @StringRes emptyText: Int) =
     galleryHeader(page.galleryLoading, page.gallery.isEmpty(), emptyText)
 
 /** Which image/video model is loaded, the downloaded ones to pick from, and load progress. */
@@ -263,28 +273,28 @@ private fun LazyGridScope.galleryHeader(page: MediaPageState, emptyText: String)
 private fun MediaModelCard(vm: AppViewModel, kind: MediaKind, page: MediaPageState, noun: String) {
     val status = page.status
     val loaded = status?.loaded == true
-    InfoCard("Model") {
+    InfoCard(stringResource(R.string.model)) {
         when {
             page.loadingModel != null -> {
-                BusyRow("Yükleniyor: ${page.loadingModel}")
+                BusyRow(stringResource(R.string.loading_name, page.loadingModel))
                 page.loadFraction?.let { ThinProgress(it, Modifier.padding(top = 8.dp)) }
             }
             loaded -> {
                 Text(status.label.orEmpty(), color = C.Text, fontSize = 16.sp)
                 Spacer(Modifier.height(8.dp))
-                PillButton("Bellekten çıkar", primary = false) { vm.media.unload(kind) }
+                PillButton(stringResource(R.string.unload), primary = false) { vm.media.unload(kind) }
             }
-            else -> Text("Yüklü $noun modeli yok. Yüklemek sohbet modelini bellekten çıkarabilir.", color = C.TextDim, fontSize = 14.sp)
+            else -> Text(stringResource(R.string.media_no_model_loaded, noun), color = C.TextDim, fontSize = 14.sp)
         }
         if (page.loadingModel != null) return@InfoCard
         val others = page.models.filter { !loaded || !it.repoId.equals(status.repoId, ignoreCase = true) }
         if (others.isNotEmpty()) {
             Spacer(Modifier.height(10.dp))
-            Text(if (loaded) "Başka model yükle" else "İndirilmiş $noun modelleri", color = C.TextFaint, fontSize = 13.sp)
+            Text(if (loaded) stringResource(R.string.load_another_model) else stringResource(R.string.media_downloaded_models, noun), color = C.TextFaint, fontSize = 13.sp)
             others.forEach { m -> PickRow(m.repoId.substringAfter('/'), formatSize(m.sizeBytes)) { vm.media.pickModel(kind, m) } }
         } else if (!loaded) {
             Spacer(Modifier.height(6.dp))
-            Text("İndirilmiş $noun modeli bulunamadı; web arayüzünden indirebilirsin.", color = C.TextFaint, fontSize = 13.sp)
+            Text(stringResource(R.string.media_no_downloaded_models, noun), color = C.TextFaint, fontSize = 13.sp)
         }
     }
 
@@ -303,16 +313,16 @@ private fun MediaModelCard(vm: AppViewModel, kind: MediaKind, page: MediaPageSta
                 }
             },
             confirmButton = {},
-            dismissButton = { TextButton(onClick = { vm.media.closePicker(kind) }) { Text("İptal", color = C.TextDim) } },
+            dismissButton = { TextButton(onClick = { vm.media.closePicker(kind) }) { Text(stringResource(R.string.cancel), color = C.TextDim) } },
         )
     }
 }
 
-/** "Üret", or the render's progress with a cancel button while one is running. */
+/** "Generate", or the render's progress with a cancel button while one is running. */
 @Composable
 private fun GenerateButton(page: MediaPageState, enabled: Boolean, onCancel: () -> Unit, onClick: () -> Unit) {
     if (!page.generating) {
-        PrimaryButton("Üret", enabled = enabled, onClick = onClick)
+        PrimaryButton(stringResource(R.string.generate), enabled = enabled, onClick = onClick)
         return
     }
     val p = page.progress
@@ -320,13 +330,13 @@ private fun GenerateButton(page: MediaPageState, enabled: Boolean, onCancel: () 
         Row(verticalAlignment = Alignment.CenterVertically) {
             Spinner(16.dp)
             Spacer(Modifier.size(10.dp))
-            val text = buildString {
-                append("Üretiliyor")
-                if (p != null && p.totalSteps > 0) append(" · adım ${p.step}/${p.totalSteps}")
-                p?.etaSeconds?.let { append(" · ~${it.toInt()} sn kaldı") }
-            }
+            val text = listOfNotNull(
+                stringResource(R.string.generating),
+                p?.takeIf { it.totalSteps > 0 }?.let { stringResource(R.string.generation_step, it.step, it.totalSteps) },
+                p?.etaSeconds?.let { stringResource(R.string.generation_eta, it.toInt()) },
+            ).joinToString(" · ")
             Text(text, color = C.Text, fontSize = 15.sp, modifier = Modifier.weight(1f))
-            PillButton("İptal", primary = false, onClick = onCancel)
+            PillButton(stringResource(R.string.cancel), primary = false, onClick = onCancel)
         }
         if (p != null && p.fraction > 0) ThinProgress(p.fraction, Modifier.padding(top = 10.dp))
     }
@@ -347,11 +357,11 @@ private fun Viewer(
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Column(Modifier.fillMaxSize().background(Color.Black)) {
             Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                CircleButton(Icons.Rounded.Close, "Kapat", onClick = onDismiss)
+                CircleButton(Icons.Rounded.Close, stringResource(R.string.close), onClick = onDismiss)
                 Spacer(Modifier.weight(1f))
-                CircleButton(Icons.Rounded.Download, "Telefona kaydet") { scope.launch { onSave(context) } }
+                CircleButton(Icons.Rounded.Download, stringResource(R.string.save_to_phone)) { scope.launch { onSave(context) } }
                 Spacer(Modifier.size(10.dp))
-                CircleButton(Icons.Rounded.Delete, "Sil") { confirmDelete = true }
+                CircleButton(Icons.Rounded.Delete, stringResource(R.string.delete)) { confirmDelete = true }
             }
             Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { content() }
             item.prompt?.takeIf { it.isNotBlank() }?.let {
@@ -360,7 +370,7 @@ private fun Viewer(
         }
     }
     if (confirmDelete) {
-        ConfirmDialog("Silinsin mi?", "Bilgisayardaki Studio galerisinden de silinecek.", onDismiss = { confirmDelete = false }) {
+        ConfirmDialog(stringResource(R.string.delete_confirm_title), stringResource(R.string.delete_gallery_message), onDismiss = { confirmDelete = false }) {
             confirmDelete = false
             onDelete()
         }
@@ -397,9 +407,9 @@ private suspend fun saveToPhone(media: MediaStudio, context: Context, path: Stri
                 put(MediaStore.MediaColumns.RELATIVE_PATH, (if (video) Environment.DIRECTORY_MOVIES else Environment.DIRECTORY_PICTURES) + "/Unsloth")
             }
             val collection = if (video) MediaStore.Video.Media.EXTERNAL_CONTENT_URI else MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-            val uri = app.contentResolver.insert(collection, values) ?: error("kaydedilemedi")
-            app.contentResolver.openOutputStream(uri)?.use { out -> file.inputStream().use { it.copyTo(out) } } ?: error("kaydedilemedi")
+            val uri = app.contentResolver.insert(collection, values) ?: error("could not save")
+            app.contentResolver.openOutputStream(uri)?.use { out -> file.inputStream().use { it.copyTo(out) } } ?: error("could not save")
         }
     }.isSuccess
-    Toast.makeText(app, if (ok) "Telefona kaydedildi" else "Kaydedilemedi", Toast.LENGTH_SHORT).show()
+    Toast.makeText(app, context.getString(if (ok) R.string.saved_to_phone else R.string.save_failed), Toast.LENGTH_SHORT).show()
 }

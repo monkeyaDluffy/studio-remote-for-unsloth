@@ -58,6 +58,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -68,6 +69,7 @@ import com.mikepenz.markdown.compose.elements.MarkdownHighlightedCodeBlock
 import com.mikepenz.markdown.compose.elements.MarkdownHighlightedCodeFence
 import com.mikepenz.markdown.m3.Markdown
 import com.mikepenz.markdown.model.rememberMarkdownState
+import io.github.monkeyadluffy.studioremote.R
 import io.github.monkeyadluffy.studioremote.data.DEEP_RESEARCH_TOOL
 import io.github.monkeyadluffy.studioremote.data.ResearchRun
 import io.github.monkeyadluffy.studioremote.data.ToolCall
@@ -85,10 +87,10 @@ fun BranchSwitcher(b: Branch, enabled: Boolean, onSelect: (String) -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         val prev = b.prevId?.takeIf { enabled }
         val next = b.nextId?.takeIf { enabled }
-        IconTap(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, "Önceki sürüm", size = 32.dp, iconSize = 20.dp,
+        IconTap(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, stringResource(R.string.previous_version), size = 32.dp, iconSize = 20.dp,
             tint = if (prev != null) C.TextDim else C.Border) { prev?.let(onSelect) }
         Text("${b.index + 1}/${b.count}", color = C.TextFaint, fontSize = 13.sp)
-        IconTap(Icons.AutoMirrored.Rounded.KeyboardArrowRight, "Sonraki sürüm", size = 32.dp, iconSize = 20.dp,
+        IconTap(Icons.AutoMirrored.Rounded.KeyboardArrowRight, stringResource(R.string.next_version), size = 32.dp, iconSize = 20.dp,
             tint = if (next != null) C.TextDim else C.Border) { next?.let(onSelect) }
     }
 }
@@ -137,8 +139,8 @@ fun UserMessage(m: UiMessage, branch: Branch?, canEdit: Boolean, onEdit: () -> U
                 ActionMenu(
                     menu, { menu = false },
                     listOfNotNull(
-                        MenuAction("Kopyala", Icons.Rounded.ContentCopy) { copyToClipboard(context, m.text) },
-                        if (canEdit) MenuAction("Düzenle ve yeniden gönder", Icons.Rounded.Edit, onClick = onEdit) else null,
+                        MenuAction(stringResource(R.string.copy), Icons.Rounded.ContentCopy) { copyToClipboard(context, m.text) },
+                        if (canEdit) MenuAction(stringResource(R.string.edit_and_resend), Icons.Rounded.Edit, onClick = onEdit) else null,
                     ),
                 )
             }
@@ -210,8 +212,8 @@ fun AssistantMessage(
         if (!m.streaming && (body.isNotEmpty() || m.error != null || branch != null)) {
             Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 branch?.let { BranchSwitcher(it, canSwitchBranch, onSelectBranch) }
-                if (body.isNotEmpty()) ActionIcon(Icons.Rounded.ContentCopy, "Kopyala") { copyToClipboard(context, body) }
-                if (canRegenerate) ActionIcon(Icons.Rounded.Refresh, "Yeniden üret", onRegenerate)
+                if (body.isNotEmpty()) ActionIcon(Icons.Rounded.ContentCopy, stringResource(R.string.copy)) { copyToClipboard(context, body) }
+                if (canRegenerate) ActionIcon(Icons.Rounded.Refresh, stringResource(R.string.regenerate), onRegenerate)
                 m.tokensPerSecond?.let {
                     Text(
                         String.format(Locale.US, "%.1f tok/s", it),
@@ -255,9 +257,9 @@ private fun ReasoningBlock(m: UiMessage) {
     var open by rememberSaveable(m.id) { mutableStateOf(false) }
     val thinking = m.streaming && m.reasoningMs == null
     val label = when {
-        thinking -> "Düşünüyor…"
-        m.reasoningMs != null -> "Düşündü · ${formatDuration(m.reasoningMs)}"
-        else -> "Düşünme"
+        thinking -> stringResource(R.string.thinking_now)
+        m.reasoningMs != null -> stringResource(R.string.thought_for, formatDuration(m.reasoningMs))
+        else -> stringResource(R.string.thinking)
     }
     val pulse by rememberInfiniteTransition(label = "pulse")
         .animateFloat(0.45f, 1f, infiniteRepeatable(tween(800), RepeatMode.Reverse), label = "alpha")
@@ -281,16 +283,17 @@ private fun ReasoningBlock(m: UiMessage) {
     }
 }
 
+@Composable
 private fun toolLabel(name: String): String = when (name) {
-    "web_search" -> "Web araması"
-    "web_fetch" -> "Sayfa okuma"
+    "web_search" -> stringResource(R.string.web_search)
+    "web_fetch" -> stringResource(R.string.tool_web_fetch)
     "python" -> "Python"
     "terminal" -> "Terminal"
-    "edit_file" -> "Dosya düzenleme"
-    "render_html" -> "HTML çizimi"
-    "search_knowledge_base" -> "Dosyalarda arama"
-    "search_conversation" -> "Sohbette arama"
-    DEEP_RESEARCH_TOOL -> "Derin araştırma"
+    "edit_file" -> stringResource(R.string.tool_edit_file)
+    "render_html" -> stringResource(R.string.tool_render_html)
+    "search_knowledge_base" -> stringResource(R.string.tool_search_files)
+    "search_conversation" -> stringResource(R.string.tool_search_chat)
+    DEEP_RESEARCH_TOOL -> stringResource(R.string.deep_research)
     else -> name
 }
 
@@ -313,12 +316,13 @@ private fun ToolCard(tool: ToolCall, onAnswer: (allow: Boolean) -> Unit) {
             if (running) Spinner() else Icon(toolIcon(tool.name), null, tint = C.TextDim, modifier = Modifier.size(18.dp))
             Spacer(Modifier.size(10.dp))
             Column(Modifier.weight(1f)) {
-                val state = when {
-                    tool.awaiting -> " · onay bekliyor"
-                    tool.denied -> " · reddedildi"
-                    else -> ""
+                val label = toolLabel(tool.name)
+                val title = when {
+                    tool.awaiting -> stringResource(R.string.tool_awaiting, label)
+                    tool.denied -> stringResource(R.string.tool_denied, label)
+                    else -> label
                 }
-                Text(toolLabel(tool.name) + state, color = C.Text, fontSize = 14.5.sp, fontWeight = FontWeight.SemiBold)
+                Text(title, color = C.Text, fontSize = 14.5.sp, fontWeight = FontWeight.SemiBold)
                 if (summary.isNotBlank()) {
                     Text(
                         summary, color = C.TextDim, fontSize = 13.sp,
@@ -330,8 +334,8 @@ private fun ToolCard(tool: ToolCall, onAnswer: (allow: Boolean) -> Unit) {
         }
         if (tool.awaiting) {
             Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                PillButton("İzin ver", primary = true) { onAnswer(true) }
-                PillButton("Reddet", primary = false) { onAnswer(false) }
+                PillButton(stringResource(R.string.allow), primary = true) { onAnswer(true) }
+                PillButton(stringResource(R.string.deny), primary = false) { onAnswer(false) }
             }
         }
         AnimatedVisibility(open && tool.result != null) {
@@ -344,16 +348,17 @@ private fun ToolCard(tool: ToolCall, onAnswer: (allow: Boolean) -> Unit) {
     }
 }
 
+@Composable
 private fun researchLabel(r: ResearchRun): String = when (r.status) {
-    "planning" -> "Araştırma planı hazırlanıyor…"
-    "awaiting_approval" -> "Plan onayını bekliyor"
-    "queued" -> "Sırada bekliyor…"
-    "running" -> "Araştırılıyor…"
-    "paused" -> "Duraklatıldı"
-    "cancelling" -> "İptal ediliyor…"
-    "completed" -> "Araştırma tamamlandı"
-    "failed" -> "Araştırma başarısız" + (r.error?.let { ": $it" } ?: "")
-    "cancelled" -> "Araştırma iptal edildi"
+    "planning" -> stringResource(R.string.research_planning)
+    "awaiting_approval" -> stringResource(R.string.research_awaiting)
+    "queued" -> stringResource(R.string.research_queued)
+    "running" -> stringResource(R.string.research_running)
+    "paused" -> stringResource(R.string.research_paused)
+    "cancelling" -> stringResource(R.string.research_cancelling)
+    "completed" -> stringResource(R.string.research_completed)
+    "failed" -> r.error?.let { stringResource(R.string.research_failed_reason, it) } ?: stringResource(R.string.research_failed)
+    "cancelled" -> stringResource(R.string.research_cancelled)
     else -> r.status
 }
 
@@ -393,8 +398,8 @@ private fun ResearchCard(r: ResearchRun, onApprove: () -> Unit, onCancel: () -> 
         }
         if (!r.terminal && r.status != "cancelling") {
             Row(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (r.awaitingApproval) PillButton("Onayla ve başlat", primary = true, onClick = onApprove)
-                PillButton("İptal", primary = false, onClick = onCancel)
+                if (r.awaitingApproval) PillButton(stringResource(R.string.approve_and_start), primary = true, onClick = onApprove)
+                PillButton(stringResource(R.string.cancel), primary = false, onClick = onCancel)
             }
         }
     }
@@ -439,6 +444,6 @@ private fun ActionIcon(icon: ImageVector, description: String, onClick: () -> Un
     IconTap(icon, description, size = 36.dp, iconSize = 18.dp, tint = C.TextFaint, onClick = onClick)
 
 private fun copyToClipboard(context: Context, text: String) {
-    context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("mesaj", text))
-    Toast.makeText(context, "Kopyalandı", Toast.LENGTH_SHORT).show()
+    context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("message", text))
+    Toast.makeText(context, context.getString(R.string.copied), Toast.LENGTH_SHORT).show()
 }

@@ -1,5 +1,6 @@
 package io.github.monkeyadluffy.studioremote.ui
 
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -47,33 +48,36 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.monkeyadluffy.studioremote.AppViewModel
+import io.github.monkeyadluffy.studioremote.R
 import io.github.monkeyadluffy.studioremote.UiState
 import io.github.monkeyadluffy.studioremote.data.InferenceStatus
 
 /** Studio's tool permission modes, worded like its own picker. */
-private class PermissionOption(val mode: String, val title: String, val description: String, val icon: ImageVector)
+private class PermissionOption(val mode: String, @param:StringRes val title: Int, @param:StringRes val description: Int, val icon: ImageVector)
 
 private val permissionOptions = listOf(
-    PermissionOption("ask", "Onay iste", "Araçlar dosya düzenlemeden veya internete çıkmadan önce her seferinde sor", Icons.Outlined.PanTool),
-    PermissionOption("auto", "Benim yerime onayla", "Araçları çalıştır, ama kimlik bilgisi erişimi, yetki yükseltme veya yıkıcı komutlar gibi riskli işlemlerde sor", Icons.Outlined.VerifiedUser),
-    PermissionOption("off", "Otomatik çalıştır", "Araçları korumalı alan (sandbox) içinde onay sormadan çalıştır", Icons.Outlined.RadioButtonChecked),
-    PermissionOption("full", "Tam erişim", "Kısıtlamasız: onay sorulmaz ve kod sandbox'ı kapalıdır", Icons.Outlined.ErrorOutline),
+    PermissionOption("ask", R.string.perm_ask_title, R.string.perm_ask_description, Icons.Outlined.PanTool),
+    PermissionOption("auto", R.string.perm_auto_title, R.string.perm_auto_description, Icons.Outlined.VerifiedUser),
+    PermissionOption("off", R.string.perm_off_title, R.string.perm_off_description, Icons.Outlined.RadioButtonChecked),
+    PermissionOption("full", R.string.perm_full_title, R.string.perm_full_description, Icons.Outlined.ErrorOutline),
 )
 
+@Composable
 fun reasoningLabel(level: String): String = when (level) {
-    "auto" -> "Otomatik"
-    "off", "none" -> "Kapalı"
-    "on" -> "Açık"
-    "minimal" -> "Minimum"
-    "low" -> "Düşük"
-    "medium" -> "Orta"
-    "high" -> "Yüksek"
-    "max" -> "Maksimum"
-    "xhigh" -> "Çok yüksek"
+    "auto" -> stringResource(R.string.auto)
+    "off", "none" -> stringResource(R.string.reasoning_off)
+    "on" -> stringResource(R.string.reasoning_on)
+    "minimal" -> stringResource(R.string.reasoning_minimal)
+    "low" -> stringResource(R.string.reasoning_low)
+    "medium" -> stringResource(R.string.reasoning_medium)
+    "high" -> stringResource(R.string.reasoning_high)
+    "max" -> stringResource(R.string.reasoning_max)
+    "xhigh" -> stringResource(R.string.reasoning_xhigh)
     else -> level
 }
 
@@ -124,34 +128,34 @@ fun PlusSheet(vm: AppViewModel, state: UiState, onPickImage: () -> Unit, onPickF
 private fun MainPage(vm: AppViewModel, state: UiState, onPickImage: () -> Unit, onPickFile: () -> Unit, onOpen: (PlusPage) -> Unit) {
     val s = state.settings
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        BigTile(Icons.Outlined.Image, "Fotoğraf", Modifier.weight(1f), onPickImage)
-        BigTile(Icons.Outlined.AttachFile, "Dosya", Modifier.weight(1f), onPickFile)
+        BigTile(Icons.Outlined.Image, stringResource(R.string.photo), Modifier.weight(1f), onPickImage)
+        BigTile(Icons.Outlined.AttachFile, stringResource(R.string.file), Modifier.weight(1f), onPickFile)
     }
-    Hint("Eklenen dosyalar sohbete bağlanır; model onlarda arama yaparak cevap verir.", Modifier.padding(bottom = 6.dp))
+    Hint(stringResource(R.string.attach_hint), Modifier.padding(bottom = 6.dp))
     Spacer(Modifier.height(8.dp))
 
     Card {
-        NavRow(Icons.Outlined.Lightbulb, "Düşünme seviyesi", reasoningLabel(s.reasoningLevel)) { onOpen(PlusPage.Reasoning) }
+        NavRow(Icons.Outlined.Lightbulb, stringResource(R.string.reasoning_level), reasoningLabel(s.reasoningLevel)) { onOpen(PlusPage.Reasoning) }
         Divider()
-        ToggleRow(Icons.Outlined.Public, "Web araması", "İnternette arayıp sayfaları okuyabilir", s.webSearch, vm::setWebSearch)
+        ToggleRow(Icons.Outlined.Public, stringResource(R.string.web_search), stringResource(R.string.web_search_description), s.webSearch, vm::setWebSearch)
         Divider()
-        ToggleRow(Icons.Outlined.TravelExplore, "Derin araştırma", "Çok adımlı araştırma yapıp kaynaklı rapor yazar", s.deepResearch, vm::setDeepResearch)
+        ToggleRow(Icons.Outlined.TravelExplore, stringResource(R.string.deep_research), stringResource(R.string.deep_research_description), s.deepResearch, vm::setDeepResearch)
         Divider()
-        ToggleRow(Icons.Outlined.Terminal, "Kod çalıştırma", "Python ve terminal araçları", s.codeTools, vm::setCodeTools)
+        ToggleRow(Icons.Outlined.Terminal, stringResource(R.string.code_execution), stringResource(R.string.code_execution_description), s.codeTools, vm::setCodeTools)
     }
     Spacer(Modifier.height(10.dp))
     Card {
         val current = permissionOptions.firstOrNull { it.mode == s.permissionMode } ?: permissionOptions[2]
-        NavRow(Icons.Outlined.Shield, "Araç izinleri", current.title) { onOpen(PlusPage.Permissions) }
+        NavRow(Icons.Outlined.Shield, stringResource(R.string.tool_permissions), stringResource(current.title)) { onOpen(PlusPage.Permissions) }
     }
-    if (state.status?.supportsTools == false) Hint("Yüklü model araç çağırmayı desteklemiyor olabilir.")
+    if (state.status?.supportsTools == false) Hint(stringResource(R.string.model_may_not_use_tools))
 }
 
 @Composable
 private fun ReasoningPage(vm: AppViewModel, state: UiState, onBack: () -> Unit) {
-    SubHeader("Düşünme seviyesi", onBack)
+    SubHeader(stringResource(R.string.reasoning_level), onBack)
     Text(
-        "Modelin cevap vermeden önce ne kadar düşüneceği. Yüksek seviye daha iyi ama daha yavaş cevap verir.",
+        stringResource(R.string.reasoning_description),
         color = C.TextDim, fontSize = 14.sp,
         modifier = Modifier.padding(horizontal = 6.dp, vertical = 8.dp),
     )
@@ -170,7 +174,7 @@ private fun ReasoningPage(vm: AppViewModel, state: UiState, onBack: () -> Unit) 
 
 @Composable
 private fun PermissionsPage(vm: AppViewModel, state: UiState, onBack: () -> Unit) {
-    SubHeader("Araç çağrıları nasıl onaylansın?", onBack)
+    SubHeader(stringResource(R.string.permissions_question), onBack)
     Spacer(Modifier.height(6.dp))
     Card {
         permissionOptions.forEachIndexed { i, option ->
@@ -185,12 +189,12 @@ private fun PermissionsPage(vm: AppViewModel, state: UiState, onBack: () -> Unit
                 Icon(option.icon, null, tint = C.Text, modifier = Modifier.padding(top = 2.dp).size(24.dp))
                 Spacer(Modifier.size(14.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(option.title, color = C.Text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text(stringResource(option.title), color = C.Text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(2.dp))
-                    Text(option.description, color = C.TextDim, fontSize = 14.5.sp, lineHeight = 20.sp)
+                    Text(stringResource(option.description), color = C.TextDim, fontSize = 14.5.sp, lineHeight = 20.sp)
                 }
                 if (state.settings.permissionMode == option.mode) {
-                    Icon(Icons.Rounded.Check, "Seçili", tint = C.Text, modifier = Modifier.padding(start = 8.dp, top = 2.dp).size(22.dp))
+                    Icon(Icons.Rounded.Check, stringResource(R.string.selected_item), tint = C.Text, modifier = Modifier.padding(start = 8.dp, top = 2.dp).size(22.dp))
                 }
             }
         }
@@ -265,14 +269,14 @@ private fun CheckRow(title: String, selected: Boolean, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(title, color = C.Text, fontSize = 17.sp, modifier = Modifier.weight(1f))
-        if (selected) Icon(Icons.Rounded.Check, "Seçili", tint = C.Text, modifier = Modifier.size(22.dp))
+        if (selected) Icon(Icons.Rounded.Check, stringResource(R.string.selected_item), tint = C.Text, modifier = Modifier.size(22.dp))
     }
 }
 
 @Composable
 private fun SubHeader(title: String, onBack: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        CircleButton(Icons.AutoMirrored.Rounded.ArrowBack, "Geri", size = 42.dp, iconSize = 22.dp, background = C.SurfaceHigh, onClick = onBack)
+        CircleButton(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back), size = 42.dp, iconSize = 22.dp, background = C.SurfaceHigh, onClick = onBack)
         Spacer(Modifier.size(12.dp))
         Text(title, color = C.Text, fontSize = 19.sp, fontWeight = FontWeight.Bold)
     }

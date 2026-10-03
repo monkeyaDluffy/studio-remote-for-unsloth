@@ -64,11 +64,15 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.monkeyadluffy.studioremote.AppViewModel
+import io.github.monkeyadluffy.studioremote.R
 import io.github.monkeyadluffy.studioremote.UiState
 import io.github.monkeyadluffy.studioremote.data.PendingFile
 import kotlinx.coroutines.launch
@@ -125,6 +129,7 @@ private class VoiceRecorder(private val context: Context) {
 @Composable
 fun Composer(vm: AppViewModel, state: UiState) {
     val context = LocalContext.current
+    val res = LocalResources.current
     val scope = rememberCoroutineScope()
     var text by rememberSaveable { mutableStateOf("") }
     val images = remember { mutableStateListOf<String>() }
@@ -139,7 +144,7 @@ fun Composer(vm: AppViewModel, state: UiState) {
             recorder.start()
             recording = true
         } catch (e: Exception) {
-            Toast.makeText(context, "Mikrofon açılamadı", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, res.getString(R.string.mic_failed), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -156,7 +161,7 @@ fun Composer(vm: AppViewModel, state: UiState) {
 
     val micPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) startRecording()
-        else Toast.makeText(context, "Sesle yazmak için mikrofon izni gerekli", Toast.LENGTH_SHORT).show()
+        else Toast.makeText(context, res.getString(R.string.mic_permission_needed), Toast.LENGTH_SHORT).show()
     }
 
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(4)) { uris ->
@@ -167,7 +172,7 @@ fun Composer(vm: AppViewModel, state: UiState) {
             uris.forEach { uri ->
                 val file = readDocument(context, uri)
                 if (file != null) vm.attachFile(file.name, file.mime, file.bytes)
-                else Toast.makeText(context, "Dosya okunamadı (en fazla 50 MB)", Toast.LENGTH_SHORT).show()
+                else Toast.makeText(context, res.getString(R.string.file_unreadable), Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -192,7 +197,7 @@ fun Composer(vm: AppViewModel, state: UiState) {
         try {
             speech.launch(intent)
         } catch (_: ActivityNotFoundException) {
-            Toast.makeText(context, "Ses tanıma bu cihazda yok", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, res.getString(R.string.no_speech_recognizer), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -208,7 +213,7 @@ fun Composer(vm: AppViewModel, state: UiState) {
             state = state,
             onPickImage = {
                 if (state.status?.isVision == false) {
-                    Toast.makeText(context, "Yüklü model görsel desteklemiyor olabilir", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, res.getString(R.string.model_may_not_see_images), Toast.LENGTH_SHORT).show()
                 }
                 imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
             },
@@ -234,7 +239,7 @@ fun Composer(vm: AppViewModel, state: UiState) {
                 if (transcribing) Spinner(14.dp) else Box(Modifier.size(10.dp).clip(CircleShape).background(C.Error))
                 Spacer(Modifier.size(8.dp))
                 Text(
-                    if (transcribing) "Whisper yazıya döküyor…" else "Dinliyorum… bitirince mikrofona tekrar dokun",
+                    stringResource(if (transcribing) R.string.whisper_transcribing else R.string.listening),
                     color = C.TextDim, fontSize = 14.sp,
                 )
             }
@@ -248,7 +253,7 @@ fun Composer(vm: AppViewModel, state: UiState) {
                 .padding(start = 6.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.Bottom,
         ) {
-            IconTap(Icons.Rounded.Add, "Ekle ve seçenekler", iconSize = 30.dp) { showPlus = true }
+            IconTap(Icons.Rounded.Add, stringResource(R.string.attach_and_options), iconSize = 30.dp) { showPlus = true }
 
             BasicTextField(
                 value = text,
@@ -259,14 +264,14 @@ fun Composer(vm: AppViewModel, state: UiState) {
                 modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
                 decorationBox = { inner ->
                     Box(Modifier.heightIn(min = 48.dp), contentAlignment = Alignment.CenterStart) {
-                        if (text.isEmpty()) Text("Ask Studio", color = C.TextFaint, fontSize = 19.sp)
+                        if (text.isEmpty()) Text(stringResource(R.string.ask_studio), color = C.TextFaint, fontSize = 19.sp)
                         inner()
                     }
                 },
             )
 
             if (mode == SendMode.Voice && !recording && !transcribing) {
-                IconTap(Icons.Rounded.Mic, "Sesle yaz", onClick = ::startSpeech)
+                IconTap(Icons.Rounded.Mic, stringResource(R.string.dictate), onClick = ::startSpeech)
                 Spacer(Modifier.size(4.dp))
             }
             Box(
@@ -285,11 +290,11 @@ fun Composer(vm: AppViewModel, state: UiState) {
             ) {
                 AnimatedContent(mode, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "send") { m ->
                     val (icon, label) = when (m) {
-                        SendMode.Stop -> Icons.Rounded.Stop to "Durdur"
-                        SendMode.Send -> Icons.Rounded.ArrowUpward to "Gönder"
-                        SendMode.Voice -> if (recording) Icons.Rounded.Stop to "Kaydı bitir" else Icons.Rounded.GraphicEq to "Sesle yaz"
+                        SendMode.Stop -> Icons.Rounded.Stop to R.string.stop
+                        SendMode.Send -> Icons.Rounded.ArrowUpward to R.string.send
+                        SendMode.Voice -> if (recording) Icons.Rounded.Stop to R.string.finish_recording else Icons.Rounded.GraphicEq to R.string.dictate
                     }
-                    Icon(icon, label, tint = Color.Black, modifier = Modifier.size(26.dp))
+                    Icon(icon, stringResource(label), tint = Color.Black, modifier = Modifier.size(26.dp))
                 }
             }
         }
@@ -314,7 +319,7 @@ private fun ImageStrip(images: List<String>, onRemove: (String) -> Unit) {
                         .background(Color.Black.copy(alpha = 0.7f))
                         .clickable { onRemove(img) },
                     contentAlignment = Alignment.Center,
-                ) { Icon(Icons.Rounded.Close, "Kaldır", tint = Color.White, modifier = Modifier.size(14.dp)) }
+                ) { Icon(Icons.Rounded.Close, stringResource(R.string.remove), tint = Color.White, modifier = Modifier.size(14.dp)) }
             }
         }
     }
@@ -337,22 +342,24 @@ private fun ComposerChips(vm: AppViewModel, state: UiState) {
     val chips = buildList {
         state.pendingFiles.forEach { f ->
             val label = when (f.status) {
-                PendingFile.Status.Uploading -> "${f.name} · yükleniyor"
-                PendingFile.Status.Indexing -> "${f.name} · işleniyor" + if (f.progress > 0) " %${(f.progress * 100).toInt()}" else ""
-                PendingFile.Status.Failed -> "${f.name} · hata"
+                PendingFile.Status.Uploading -> stringResource(R.string.file_uploading, f.name)
+                PendingFile.Status.Indexing ->
+                    if (f.progress > 0) stringResource(R.string.file_indexing_progress, f.name, (f.progress * 100).toInt())
+                    else stringResource(R.string.file_indexing, f.name)
+                PendingFile.Status.Failed -> stringResource(R.string.file_failed, f.name)
                 PendingFile.Status.Ready -> f.name
             }
             add(Chip(f.key, label, Icons.Outlined.Description, f.busy, f.status == PendingFile.Status.Failed) { vm.removePendingFile(f.key) })
         }
         if (state.threadDocCount > 0 && state.pendingFiles.isEmpty()) {
-            add(Chip("docs", "${state.threadDocCount} dosya bağlı", Icons.Outlined.Description))
+            add(Chip("docs", pluralStringResource(R.plurals.files_attached, state.threadDocCount, state.threadDocCount), Icons.Outlined.Description))
         }
         if (s.reasoningLevel != "auto") {
-            add(Chip("reasoning", "Düşünme: " + reasoningLabel(s.reasoningLevel), Icons.Outlined.Lightbulb) { vm.setReasoningLevel("auto") })
+            add(Chip("reasoning", stringResource(R.string.thinking_chip, reasoningLabel(s.reasoningLevel)), Icons.Outlined.Lightbulb) { vm.setReasoningLevel("auto") })
         }
-        if (s.webSearch) add(Chip("web", "Web", Icons.Outlined.Public) { vm.setWebSearch(false) })
-        if (s.deepResearch) add(Chip("research", "Derin araştırma", Icons.Outlined.TravelExplore) { vm.setDeepResearch(false) })
-        if (s.codeTools) add(Chip("code", "Kod", Icons.Outlined.Terminal) { vm.setCodeTools(false) })
+        if (s.webSearch) add(Chip("web", stringResource(R.string.web_chip), Icons.Outlined.Public) { vm.setWebSearch(false) })
+        if (s.deepResearch) add(Chip("research", stringResource(R.string.deep_research), Icons.Outlined.TravelExplore) { vm.setDeepResearch(false) })
+        if (s.codeTools) add(Chip("code", stringResource(R.string.code_chip), Icons.Outlined.Terminal) { vm.setCodeTools(false) })
     }
     if (chips.isEmpty()) return
 
@@ -374,7 +381,7 @@ private fun ComposerChips(vm: AppViewModel, state: UiState) {
                 )
                 c.onRemove?.let { remove ->
                     Box(Modifier.padding(start = 2.dp)) {
-                        IconTap(Icons.Rounded.Close, "Kaldır", size = 24.dp, iconSize = 14.dp, onClick = remove)
+                        IconTap(Icons.Rounded.Close, stringResource(R.string.remove), size = 24.dp, iconSize = 14.dp, onClick = remove)
                     }
                 }
             }

@@ -34,11 +34,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.monkeyadluffy.studioremote.AppViewModel
+import io.github.monkeyadluffy.studioremote.R
 import io.github.monkeyadluffy.studioremote.data.ApiException
 import io.github.monkeyadluffy.studioremote.data.Settings
 import io.github.monkeyadluffy.studioremote.data.normalizeServerUrl
@@ -54,6 +57,7 @@ private fun noAutoCorrect(type: KeyboardType) = KeyboardOptions(
 @Composable
 fun SetupScreen(vm: AppViewModel, settings: Settings) {
     val scope = rememberCoroutineScope()
+    val res = LocalResources.current
     var url by remember { mutableStateOf(settings.serverUrl) }
     var username by remember { mutableStateOf(settings.username) }
     var password by remember { mutableStateOf("") }
@@ -89,19 +93,19 @@ fun SetupScreen(vm: AppViewModel, settings: Settings) {
                 Icon(Icons.AutoMirrored.Rounded.Chat, null, tint = Color.Black, modifier = Modifier.size(34.dp))
             }
             Spacer(Modifier.height(24.dp))
-            Text("Unsloth Studio'ya bağlan", style = MaterialTheme.typography.headlineMedium, color = C.Text)
+            Text(stringResource(R.string.connect_title), style = MaterialTheme.typography.headlineMedium, color = C.Text)
             Spacer(Modifier.height(8.dp))
             Text(
-                "Bilgisayarındaki Unsloth'un tünel linkini yapıştır (ör. https://…trycloudflare.com).",
+                stringResource(R.string.connect_subtitle),
                 color = C.TextDim, fontSize = 16.sp,
             )
             Spacer(Modifier.height(32.dp))
 
-            SectionLabel("Sunucu adresi")
+            SectionLabel(stringResource(R.string.server_address))
             PillField(
                 value = url,
                 onValueChange = { url = it; connected = false; error = null },
-                placeholder = "https://ornek.trycloudflare.com",
+                placeholder = stringResource(R.string.server_address_example),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
             )
 
@@ -109,30 +113,30 @@ fun SetupScreen(vm: AppViewModel, settings: Settings) {
                 Column {
                     Spacer(Modifier.height(20.dp))
                     if (useKey) {
-                        SectionLabel("API anahtarı")
+                        SectionLabel(stringResource(R.string.api_key))
                         PillField(apiKey, { apiKey = it; error = null }, "sk-unsloth-…", password = true,
                             keyboardOptions = noAutoCorrect(KeyboardType.Password))
                     } else {
                         if (!singleUser) {
-                            SectionLabel("Kullanıcı adı")
+                            SectionLabel(stringResource(R.string.username))
                             PillField(username, { username = it; error = null }, "unsloth",
                                 keyboardOptions = noAutoCorrect(KeyboardType.Ascii))
                             Spacer(Modifier.height(16.dp))
                         }
-                        SectionLabel("Şifre")
-                        PillField(password, { password = it; error = null }, "Unsloth Studio şifren", password = true,
+                        SectionLabel(stringResource(R.string.password))
+                        PillField(password, { password = it; error = null }, stringResource(R.string.password_placeholder), password = true,
                             keyboardOptions = noAutoCorrect(KeyboardType.Password))
                     }
                     Text(
-                        if (useKey) "Şifreyle giriş yap" else "Şifre olmadan: API anahtarıyla giriş yap",
+                        stringResource(if (useKey) R.string.sign_in_with_password else R.string.sign_in_with_key),
                         color = C.TextDim, fontSize = 14.sp,
                         modifier = Modifier
                             .padding(top = 10.dp, start = 4.dp)
                             .clickable { useKey = !useKey; error = null },
                     )
                     Spacer(Modifier.height(16.dp))
-                    SectionLabel("Adın (karşılama için)")
-                    PillField(name, { name = it }, "Örn. Ayşe")
+                    SectionLabel(stringResource(R.string.name_for_greeting))
+                    PillField(name, { name = it }, stringResource(R.string.name_example))
                 }
             }
 
@@ -143,7 +147,7 @@ fun SetupScreen(vm: AppViewModel, settings: Settings) {
 
             Spacer(Modifier.height(28.dp))
             PrimaryButton(
-                text = if (connected) "Giriş yap" else "Bağlan",
+                text = stringResource(if (connected) R.string.sign_in else R.string.connect),
                 enabled = url.isNotBlank() && (!connected ||
                     (if (useKey) apiKey.isNotBlank() else (singleUser || username.isNotBlank()) && password.isNotEmpty())),
                 loading = busy,
@@ -159,17 +163,15 @@ fun SetupScreen(vm: AppViewModel, settings: Settings) {
                                 singleUser = st.singleUser
                                 if (username.isBlank() || singleUser) username = st.defaultUsername ?: "unsloth"
                             }
-                            .onFailure { error = "Bağlanılamadı: ${it.message ?: it.javaClass.simpleName}" }
+                            .onFailure { error = res.getString(R.string.connect_failed, it.message ?: it.javaClass.simpleName) }
                     } else {
                         val result = if (useKey) vm.loginWithKey(url, apiKey, name)
                         else vm.login(url, username, password, name)
                         result.onFailure { e ->
                             error = when ((e as? ApiException)?.code) {
-                                401 -> if (useKey) "API anahtarı geçersiz."
-                                else "Kullanıcı adı veya şifre yanlış. Göz simgesiyle şifreyi kontrol et " +
-                                    "(büyük/küçük harf, Türkçe i/ı/İ, sondaki boşluk)."
-                                429 -> "Çok fazla hatalı deneme. Biraz bekleyip tekrar dene."
-                                else -> e.message ?: "Giriş başarısız"
+                                401 -> res.getString(if (useKey) R.string.invalid_api_key else R.string.wrong_credentials)
+                                429 -> res.getString(R.string.too_many_attempts)
+                                else -> e.message ?: res.getString(R.string.sign_in_failed)
                             }
                         }
                     }
